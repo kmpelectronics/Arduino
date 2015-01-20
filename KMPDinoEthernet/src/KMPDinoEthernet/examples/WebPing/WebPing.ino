@@ -50,7 +50,7 @@ EthernetClient _client;
 // Buffer to read IP from post request. Format XXX.XXX.XXX.XXX\0 - 16
 const uint8_t MAX_IPSTR_LEN = 16;
 char _ipStrByffer[MAX_IPSTR_LEN];
-
+uint8_t _ipBuff[4];
 char _buffer[10];
 
 // Create instance ICMPProtocol class.
@@ -287,12 +287,15 @@ void WriteClientResponse()
         // If ping range of IP's - uncomment.
 		for(uint8_t i = 0; i < 10/*255*/; i++)
 		{
-			IPAddress address(192, 168, 0, i);
-			PingIP(address);
+            _ipBuff[0] = 192;
+            _ipBuff[1] = 168;
+            _ipBuff[2] = 0;
+            _ipBuff[3] = i;
+			PingIP(_ipBuff);
 		}
 #else
-        IPAddress address = atoip(_ipStrByffer);
-        if(address == INADDR_NONE)
+        
+        if(!atoip(_ipStrByffer, _ipBuff))
         {
 #ifdef DEBUG
             Serial.print("IP is invalid.");
@@ -300,7 +303,7 @@ void WriteClientResponse()
             _client.write("IP is invalid.");
         }
         else
-            PingIP(address);
+            PingIP(_ipBuff);
 #endif
     }
 
@@ -323,7 +326,7 @@ void WriteClientResponse()
  * 
  * \return void
  */
-void PingIP(IPAddress& address)
+void PingIP(uint8_t* address)
 {
 #ifdef DEBUG
     Serial.print("Ping IP address: ");
@@ -351,7 +354,8 @@ void PingIP(IPAddress& address)
         IntToChars(echoReply.seq, _buffer);
         _client.write(_buffer);
         _client.write(" from ");
-        _client.print(echoReply.addr);
+        iptoa(echoReply.addr, _buffer);
+        _client.write(_buffer);
         _client.write(" bytes=");
         IntToChars(PAYLOAD_DATA_SIZE, _buffer);
         _client.write(_buffer);
@@ -370,7 +374,8 @@ void PingIP(IPAddress& address)
         Serial.println(echoReply.status);
 #endif
         _client.write("IP: ");
-        _client.print(address);
+        iptoa(address, _buffer);
+        _client.write(_buffer);
         _client.write(" Failed: ");
 
         char* msg;

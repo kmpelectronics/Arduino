@@ -98,7 +98,7 @@ struct ICMPEchoReply
     // SUCCESS if the ping succeeded. One of various error codes if it failed.
     ICMPStatus status;
     // The IP address that we received the response from. Something is broken if this doesn't match the IP address we pinged.
-    IPAddress addr;
+    uint8_t addr[4];
     // Time in milliseconds for replay.
     unsigned long time;
     // Sequence number.
@@ -125,7 +125,7 @@ class ICMPProtocol
         failed. If the request failed, the status indicates the reason for
         failure on the last retry.
         */
-        ICMPEchoReply Ping(const IPAddress& addr, uint16_t id, int nRetries);
+        ICMPEchoReply Ping(uint8_t * addr, uint16_t id, int nRetries);
 
     private:
         /*
@@ -135,7 +135,7 @@ class ICMPProtocol
         @param hdr: ICMP header data.
         @return ICMPStatus return status.
         */
-        ICMPStatus sendEchoRequest(SOCKET socket, const IPAddress& addr, const ICMPHeader& hdr);
+        ICMPStatus sendEchoRequest(SOCKET socket, uint8_t * addr, const ICMPHeader& hdr);
         /*
         @brief Receive echo reply.
         @param socket: Socket through which communicates
@@ -146,7 +146,7 @@ class ICMPProtocol
         void receiveEchoReply(SOCKET socket, ICMPHeader& hdr, ICMPEchoReply& echoReply);
 
         // Store next sequence number.
-        uint8_t _nextSeq;
+        uint16_t _nextSeq;
 };
 
 #endif

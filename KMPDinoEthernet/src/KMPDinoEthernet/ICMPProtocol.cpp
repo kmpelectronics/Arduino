@@ -85,9 +85,11 @@ uint8_t GetFreeSocket()
 }
 
 ICMPProtocol::ICMPProtocol()
-{}
+{
+    _nextSeq = 0;
+}
 
-ICMPEchoReply ICMPProtocol::Ping(const IPAddress& addr, uint16_t id, int nRetries)
+ICMPEchoReply ICMPProtocol::Ping(uint8_t * addr, uint16_t id, int nRetries)
 {
     ICMPEchoReply result;
     
@@ -105,7 +107,7 @@ ICMPEchoReply ICMPProtocol::Ping(const IPAddress& addr, uint16_t id, int nRetrie
     hdr.type = ICMP_ECHOREQ;
     hdr.code = ICMP_CODE;
     hdr.id = id;
-    hdr.seq = _nextSeq++;
+    hdr.seq = ++_nextSeq;
 
     // Prepare and open socket.
     W5200.execCmdSn(socket, Sock_CLOSE);
@@ -142,7 +144,7 @@ ICMPEchoReply ICMPProtocol::Ping(const IPAddress& addr, uint16_t id, int nRetrie
     return result;
 }
 
-ICMPStatus ICMPProtocol::sendEchoRequest(SOCKET socket, const IPAddress& addr, const ICMPHeader& hdr)
+ICMPStatus ICMPProtocol::sendEchoRequest(SOCKET socket, uint8_t * addr, const ICMPHeader& hdr)
 {
     // Prepare ICMP packet.
     uint8_t icmpPacket[ICMP_PACKET_SIZE];
@@ -171,11 +173,8 @@ ICMPStatus ICMPProtocol::sendEchoRequest(SOCKET socket, const IPAddress& addr, c
 
     // Add check sum.
     CalcChecksum(icmpPacket);
-
-    // Convert IP address pt array.
-    uint8_t addrEndian [] = {addr[0], addr[1], addr[2], addr[3]};
     
-    W5200.writeSnDIPR(socket, addrEndian);
+    W5200.writeSnDIPR(socket, addr);
     W5200.writeSnTTL(socket, TTL);
     // The port isn't used, because ICMP is a network-layer protocol. So we
     // write zero. This probably isn't actually necessary.
