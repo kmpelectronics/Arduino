@@ -331,7 +331,7 @@ void RS485Begin(unsigned long boud);
  * 
  * \return void
  */
-void RS485Begin(unsigned long boud, uint8_t config);
+void RS485Begin(unsigned long baud, byte config);
 
 /**
  * \brief Close connection to RS485.
