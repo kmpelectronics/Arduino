@@ -7,9 +7,9 @@
 //		ProDiNo NetBoard V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
 // Description:
 //		Web server relay manipulation example and Web server opto inputs show example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/webrelaycontrol.aspx
-// Version: 1.1.0
-// Date: 21.11.2014
+// Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/webrelayoptoin.aspx
+// Version: 1.0.0
+// Date: 04.03.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include <SPI.h>
@@ -22,7 +22,7 @@
 //#define DEBUG
 
 // Enter a MAC address and IP address for your controller below.
-byte     _mac[] = { 0x80, 0x9B, 0x20, 0x9B, 0xFF, 0xB0 };
+byte     _mac[] = { 0x80, 0x9B, 0x20, 0xA3, 0x1A, 0x9A };
 // The IP address will be dependent on your local network.
 byte      _ip[] = { 192, 168, 1, 199 };
 // Gateway.
@@ -259,12 +259,12 @@ void WriteClientResponse()
     _client.write("Portals/0/Projects/Arduino/Lib/icons/WebRelay.ico' type='image/x-icon'>");
     
     // End header.
-    _client.write("<title>KMP Electronics Ltd. DiNo Ethernet - Web Relay</title></head>");
+    _client.write("<title>KMP Electronics Ltd. ProDiNo NetBoard V2.1 - Web Relay</title></head>");
 
     // Body
     _client.write("<body><div style='text-align: center'>");
-    _client.write("<br><hr />");
-    _client.write("<h1 style='color: #0066FF;'>DiNo Ethernet - Web Relay example</h1>");
+    _client.write("<hr /><h1 style='color: #0066FF;'>ProDiNo NetBoard V2.1</h1><hr />");
+    _client.write("<h2 style='color: #0066FF;'>Web Relay example</h2>");
     _client.write("<hr /><br><br>");
 
     _client.write("<form method='get'>");
@@ -312,9 +312,9 @@ void WriteClientResponse()
     }
 
     _client.write("</table></form>");
-    _client.write("<br><br><hr />");
+    _client.write("<br><hr />");
     
-    _client.write("<h1 style='color: #0066FF;'>DiNo Ethernet - Web Opto Inputs example</h1>");
+    _client.write("<h2 style='color: #0066FF;'>Web Opto Inputs example</h2>");
     _client.write("<hr /><br><br>");
 
     // Table
@@ -366,7 +366,7 @@ void WriteClientResponse()
     _client.write("' target='_blank'>Visit KMPElectronics.eu!</a></h1>");
     _client.write("<h3><a href='");
     _client.write(_kmpURL);
-    _client.write("en-us/products/dinoii.aspx' target='_blank'>Information about DiNo Ethernet board</a></h3>");
+    _client.write("en-us/products/prodinoethernet.aspx' target='_blank'>Information about ProDiNo NetBoard V2.1 board</a></h3>");
     _client.write("<hr />");
 
     _client.write("</div></body>");
