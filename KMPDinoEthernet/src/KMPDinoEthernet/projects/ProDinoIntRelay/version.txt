@@ -1,7 +1,7 @@
 Company: KMP Electronics Ltd, Bulgaria
 Project: ProDino Internet Relay
 
-1.0.1 - Fix debug mode.
+1.0.0 - First release.
 
 History:
 1.0.0 - First release.

@@ -117,14 +117,11 @@ void setup()
 #ifdef DEBUG
 void PrintDebugInfo()
 {
-    IPAddressToA(Ethernet.localIP(), _macBuff);
-    iptoa(_macBuff, _ipBuff);
+    iptoa(Ethernet.localIP().raw_address(), _ipBuff);
     Serial.println(_ipBuff);
-    IPAddressToA(Ethernet.subnetMask(), _macBuff);
-    iptoa(_macBuff, _ipBuff);
+    iptoa(Ethernet.subnetMask().raw_address(), _ipBuff);
     Serial.println(_ipBuff);
-    IPAddressToA(Ethernet.gatewayIP(), _macBuff);
-    iptoa(_macBuff, _ipBuff);
+    iptoa(Ethernet.gatewayIP().raw_address(), _ipBuff);
     Serial.println(_ipBuff);
 
     Ethernet.macAddress(_macBuff);
