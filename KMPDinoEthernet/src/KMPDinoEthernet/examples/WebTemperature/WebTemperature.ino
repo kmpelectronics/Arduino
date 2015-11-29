@@ -8,32 +8,15 @@
 // Description:
 //		Web server check One Ware temperature sensors DS18B20 or DS18S20. Sensors (one or many) must connect to board. 
 // Example link: http://kmpelectronics.eu/en-us/examples/dinoii/webtemperaturecheck.aspx
-// Version: 1.1.0
-// Date: 03.12.2014
+// Version: 1.2.0
+// Date: 29.11.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
+// Description: Compatibilie Arduinio version >= 1.6.5
 
-// Headers for version before 1.6.6
 #include <SPI.h>
-#include "./Ethernet.h"
+#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
-// Headers for version >= 1.6.6
-/*
-#include <Base64.h>
-#include <DallasTemperature.h>
-#include <Dhcp.h>
-#include <Dns.h>
-#include <Ethernet.h>
-#include <EthernetClient.h>
-#include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <ICMPProtocol.h>
-#include <KMPCommon.h>
-#include <KmpDinoEthernet.h>
-#include <OneWire.h>
-#include <util.h>
-#include <w5200.h>
-*/
 
 // One Wire headers
 #include <OneWire.h>
@@ -48,13 +31,10 @@
 #define TEMPERATURE_PRECISION 9
 
 // Enter a MAC address and IP address for your controller below.
-byte     _mac[] = { 0x80, 0x9B, 0x20, 0xF1, 0x46, 0x3B };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0x41, 0xBA, 0x71 };
+
 // The IP address will be dependent on your local network.
-byte      _ip[] = { 192, 168, 1, 199 };                  
-// Gateway.
-byte _gateway[] = { 192, 168, 1, 1 };
-// Sub net mask
-byte  _subnet[] = { 255, 255, 255, 0 };
+IPAddress _ip(192, 168, 1, 199);
 
 // Buffer to Hex bytes.
 char _buffer[10];
@@ -111,7 +91,7 @@ void setup()
     DinoInit();
 
     // Start the Ethernet connection and the server.
-    Ethernet.begin(_mac, _ip, _gateway, _subnet);
+    Ethernet.begin(_mac, _ip);
     _server.begin();
 
 #ifdef DEBUG
@@ -223,9 +203,9 @@ void WriteClientResponse()
 
     // Response write.
     // Send a standard http header.
-    _client.writeln("HTTP/1.1 200 OK");
-    _client.writeln("Content-Type: text/html");
-    _client.writeln("");
+    _client.write("HTTP/1.1 200 OK\r\n");
+    _client.write("Content-Type: text/html\r\n");
+    _client.write("\r\n");
 
     // Add web page HTML.
     _client.write("<html>");

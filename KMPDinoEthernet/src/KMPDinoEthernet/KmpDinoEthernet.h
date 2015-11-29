@@ -11,11 +11,11 @@
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // Warning! RS485 don't work Arduino version 1.5.6 and next. This is version optimized for SAM microprocessors.
 //          Please use the version 1.5.5 or 1.0.6 or latest (this versions only for ARM microprocessors).
-
 #ifndef	KMPDINOETHERNET_H_INCLUDED
 #define	KMPDINOETHERNET_H_INCLUDED
 
 #include <Arduino.h>
+#include <Ethernet.h>
 
 // Count of inputs and outputs.
 #define RELAY_COUNT  4

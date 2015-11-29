@@ -8,45 +8,25 @@
 // Description:
 //		Web server relay manipulation example and Web server opto inputs show example. 
 // Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/webrelayoptoin.aspx
-// Version: 1.0.0
-// Date: 04.03.2015
+// Version: 1.2.0
+// Date: 29.11.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
+// Description: Compatibilie Arduinio version >= 1.6.5
 
-// Headers for version before 1.6.6
 #include <SPI.h>
-#include "./Ethernet.h"
+#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
-// Headers for version >= 1.6.6
-/*
-#include <Base64.h>
-#include <DallasTemperature.h>
-#include <Dhcp.h>
-#include <Dns.h>
-#include <Ethernet.h>
-#include <EthernetClient.h>
-#include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <ICMPProtocol.h>
-#include <KMPCommon.h>
-#include <KmpDinoEthernet.h>
-#include <OneWire.h>
-#include <util.h>
-#include <w5200.h>
-*/
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
 // This method is good for development and verification of results. But increases the amount of code and decreases productivity.
 //#define DEBUG
 
 // Enter a MAC address and IP address for your controller below.
-byte     _mac[] = { 0x80, 0x9B, 0x20, 0xA3, 0x1A, 0x9A };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0x56, 0x0A, 0x12 };
+
 // The IP address will be dependent on your local network.
-byte      _ip[] = { 192, 168, 1, 199 };
-// Gateway.
-byte _gateway[] = { 192, 168, 1, 1 };
-// Sub net mask
-byte  _subnet[] = { 255, 255, 255, 0 };
+IPAddress _ip(192, 168, 1, 199);
 
 // Local port.
 // Port 80 is default for HTTP
@@ -85,7 +65,7 @@ void setup()
     DinoInit();
 
     // Start the Ethernet connection and the server.
-    Ethernet.begin(_mac, _ip, _gateway, _subnet);
+    Ethernet.begin(_mac, _ip);
     _server.begin();
 
 #ifdef DEBUG
@@ -261,9 +241,9 @@ void WriteClientResponse()
 
     // Response write.
     // Send a standard http header.
-    _client.writeln("HTTP/1.1 200 OK");
-    _client.writeln("Content-Type: text/html");
-    _client.writeln("");
+    _client.write("HTTP/1.1 200 OK\r\n");
+    _client.write("Content-Type: text/html\r\n");
+    _client.write("\r\n");
 
     // Add web page HTML.
     _client.write("<html>");

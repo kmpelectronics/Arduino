@@ -1,0 +1,5 @@
+Arduino Ethernet library
+Version: 1.0.0
+
+History:
+Version: 1.0.0 - Add support >=Arduino 1.6.5 version. Change W5200 library and move in Arduino /libraries/Ethernet/src. Support default Arduino Ethernet examples.

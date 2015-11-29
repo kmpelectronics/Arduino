@@ -8,45 +8,25 @@
 // Description:
 //		Tcp server relay manipulation example. 
 // Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/tcprelaycontrol.aspx
-// Version: 1.1.0
-// Date: 21.11.2014
+// Version: 1.2.0
+// Date: 29.11.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
+// Description: Compatibilie Arduinio version >= 1.6.5
 
-// Headers for version before 1.6.6
 #include <SPI.h>
-#include "./Ethernet.h"
+#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
-// Headers for version >= 1.6.6
-/*
-#include <Base64.h>
-#include <DallasTemperature.h>
-#include <Dhcp.h>
-#include <Dns.h>
-#include <Ethernet.h>
-#include <EthernetClient.h>
-#include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <ICMPProtocol.h>
-#include <KMPCommon.h>
-#include <KmpDinoEthernet.h>
-#include <OneWire.h>
-#include <util.h>
-#include <w5200.h>
-*/
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
 // This method is good for development and verification of results. But increases the amount of code and decreases productivity.
-#define DEBUG
+//#define DEBUG
 
 // Enter a MAC address and IP address for your controller below.
-byte     mac[] = { 0x80, 0x9B, 0x20, 0xEC, 0xEE, 0xAE };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0x2B, 0x82, 0xC0 };
+
 // The IP address will be dependent on your local network.
-byte      ip[] = { 192, 168, 1, 199 };
-// Gateway.
-byte gateway[] = { 192, 168, 1, 1 };
-// Sub net mask.
-byte  subnet[] = { 255, 255, 255, 0 };
+IPAddress _ip(192, 168, 1, 199);
 
 // Local port.
 const uint16_t LOCAL_PORT = 1111;
@@ -89,7 +69,7 @@ void setup()
     DinoInit();
 
     // Start the Ethernet connection and the server.
-    Ethernet.begin(mac, ip, gateway, subnet);
+    Ethernet.begin(_mac, _ip);
     _server.begin();
 
 #ifdef DEBUG

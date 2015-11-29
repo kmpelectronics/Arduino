@@ -8,37 +8,20 @@
 // Description:
 //		RS485 echo test example.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/rs485echo.aspx
-// Version: 1.1.0
-// Date: 20.11.2014
+// Version: 1.2.0
+// Date: 29.11.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-// Warning! RS485 don't work Arduino version 1.5.6 and next. This is version optimized for SAM microprocessors.
-//          Please use the version 1.5.5 or 1.0.6 or latest (this versions only for ARM microprocessors).
+// Description: Compatibilie Arduinio version >= 1.6.5
+// Warning! RS485 don't work Arduino version from 1.5.6 to 1.6.4. Please use the version: >=1.6.5.
 
-// Headers for version before 1.6.6
 #include <SPI.h>
-#include "./Ethernet.h"
-#include "KmpDinoEthernet.h"
-// Headers for version >= 1.6.6
-/*
-#include <Base64.h>
-#include <DallasTemperature.h>
-#include <Dhcp.h>
-#include <Dns.h>
 #include <Ethernet.h>
-#include <EthernetClient.h>
-#include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <ICMPProtocol.h>
-#include <KMPCommon.h>
-#include <KmpDinoEthernet.h>
-#include <OneWire.h>
-#include <util.h>
-#include <w5200.h>
-*/
+#include "KmpDinoEthernet.h"
+#include "KMPCommon.h"
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
 // This method is good for development and verification of results. But increases the amount of code and decreases performance.
-#define DEBUG
+//#define DEBUG
 
 const uint8_t BUFF_MAX = 255;
 

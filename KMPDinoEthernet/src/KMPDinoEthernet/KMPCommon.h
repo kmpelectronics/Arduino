@@ -11,18 +11,16 @@
 #ifndef _KMPCOMMON_h
 #define _KMPCOMMON_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 #include "IPAddress.h"
 
+#ifndef UINT8_MAX
+#define UINT8_MAX (~(uint8_t)0)
+#endif
+
 // Length in bytes for IP addresses.
 #define IP_LEN 4
-#define UINT16_MAX 65535
-#define UINT8_MAX 255
 
 const char CH_NONE = '\0';
 const char CH_AMPERSAND = '&';

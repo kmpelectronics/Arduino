@@ -8,47 +8,25 @@
 // Description:
 //		Web server RS485 test example.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/webrs485test.aspx
-// Version: 1.1.0
-// Date: 27.11.2014
+// Version: 1.2.0
+// Date: 29.11.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-// Warning! RS485 don't work Arduino version 1.5.6 and next. This is version optimized for SAM microprocessors.
-//          Please use the version 1.5.5 or 1.0.6 or latest (this versions only for ARM microprocessors).
+// Description: Compatibilie Arduinio version >= 1.6.5
+// Warning! RS485 don't work Arduino version from 1.5.6 to 1.6.4. Please use the version: >=1.6.5.
 
-// Headers for version before 1.6.6
 #include <SPI.h>
-#include "./Ethernet.h"
+#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
-// Headers for version >= 1.6.6
-/*
-#include <Base64.h>
-#include <DallasTemperature.h>
-#include <Dhcp.h>
-#include <Dns.h>
-#include <Ethernet.h>
-#include <EthernetClient.h>
-#include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <ICMPProtocol.h>
-#include <KMPCommon.h>
-#include <KmpDinoEthernet.h>
-#include <OneWire.h>
-#include <util.h>
-#include <w5200.h>
-*/
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
 // This method is good for development and verification of results. But increases the amount of code and decreases productivity.
-#define DEBUG
+//#define DEBUG
 
 // Enter a MAC address and IP address for your controller below.
-byte     _mac[] = { 0x80, 0x9B, 0x20, 0x67, 0xEC, 0x02 };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0xEE, 0x64, 0xD4 };
 // The IP address will be dependent on your local network.
-byte      _ip[] = { 192, 168, 1, 199};                  
-// Gateway.
-byte _gateway[] = { 192, 168, 1, 1 };
-// Sub net mask
-byte  _subnet[] = { 255, 255, 255, 0 };
+IPAddress _ip(192, 168, 1, 199);
 
 // Local port.
 // Port 80 is default for HTTP
@@ -88,7 +66,7 @@ void setup()
     RS485Begin(19200);
 
     // Start the Ethernet connection and the server.
-    Ethernet.begin(_mac, _ip, _gateway, _subnet);
+    Ethernet.begin(_mac, _ip);
     _server.begin();
 
 #ifdef DEBUG
@@ -175,7 +153,7 @@ bool ReadClientRequest()
     bool result = false;
     bool isGet = false;
     bool readData = false;
-    char prevChar = '/0';
+    char prevChar = 0;
 
     // Loop while read all request.
     while (_client.available()) 
@@ -252,9 +230,9 @@ void WriteClientResponse()
 
     // Response write.
     // Send a standard http header.
-    _client.writeln("HTTP/1.1 200 OK");
-    _client.writeln("Content-Type: text/html");
-    _client.writeln("");
+    _client.write("HTTP/1.1 200 OK\r\n");
+    _client.write("Content-Type: text/html\r\n");
+    _client.write("\r\n");
 
     // Add web page HTML.
     _client.write("<html>");
@@ -317,12 +295,12 @@ void WriteClientResponse()
 
     _client.write("</td><td>Received</td></tr></tbody>");
 
-    _client.writeln("</table></form>");
-    _client.writeln("<br><br><hr />");
+    _client.write("</table></form>");
+    _client.write("<br><br><hr />");
     _client.write("<h1><a href='http://kmpelectronics.eu/' target='_blank'>Visit KMPElectronics.eu!</a></h1>");
     _client.write("<h3><a href='http://www.kmpelectronics.eu/en-us/products/prodinoethernet.aspx' target='_blank'>Information about ProDino Ethernet board</a></h3>");
-    _client.writeln("<hr />");
+    _client.write("<hr />");
 
-    _client.writeln("</div></body>");
-    _client.writeln("</html>");
+    _client.write("</div></body>");
+    _client.write("</html>");
 }

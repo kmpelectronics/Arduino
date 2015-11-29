@@ -26,7 +26,7 @@
 #define	ICMPPING_H_INCLUDED
 
 #include <Ethernet.h>
-#include "w5200.h"
+#include "utility/w5100.h"
 
 // ICMP Echo request type.
 #define ICMP_ECHOREQ 8

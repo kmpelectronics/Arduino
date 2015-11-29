@@ -9,7 +9,7 @@
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include "ICMPProtocol.h"
-#include <util.h>
+#include "utility/util.h"
 
 /**
 * @brief Convert two bytes in word in little endian Arduino format.
@@ -73,7 +73,7 @@ uint8_t GetFreeSocket()
 {
     for (int i = 0; i < MAX_SOCK_NUM; i++) 
     {
-        uint8_t s = W5200.readSnSR(i);
+        uint8_t s = W5100.readSnSR(i);
         if (s == SnSR::CLOSED || s == SnSR::FIN_WAIT
         || s == SnSR::CLOSE_WAIT) 
         {
@@ -110,12 +110,12 @@ ICMPEchoReply ICMPProtocol::Ping(uint8_t * addr, uint16_t id, int nRetries)
     hdr.seq = ++_nextSeq;
 
     // Prepare and open socket.
-    W5200.execCmdSn(socket, Sock_CLOSE);
-    W5200.writeSnIR(socket, 0xFF);
-    W5200.writeSnMR(socket, SnMR::IPRAW);
-    W5200.writeSnPROTO(socket, IPPROTO::ICMP);
-    W5200.writeSnPORT(socket, 0);
-    W5200.execCmdSn(socket, Sock_OPEN);
+    W5100.execCmdSn(socket, Sock_CLOSE);
+    W5100.writeSnIR(socket, 0xFF);
+    W5100.writeSnMR(socket, SnMR::IPRAW);
+    W5100.writeSnPROTO(socket, IPPROTO::ICMP);
+    W5100.writeSnPORT(socket, 0);
+    W5100.execCmdSn(socket, Sock_OPEN);
 
     // Calculate ping time.
     unsigned long startTime = millis();
@@ -138,8 +138,8 @@ ICMPEchoReply ICMPProtocol::Ping(uint8_t * addr, uint16_t id, int nRetries)
     result.time = millis() - startTime;
 
     // Close socket.    
-    W5200.execCmdSn(socket, Sock_CLOSE);
-    W5200.writeSnIR(socket, 0xFF);
+    W5100.execCmdSn(socket, Sock_CLOSE);
+    W5100.writeSnIR(socket, 0xFF);
 
     return result;
 }
@@ -174,28 +174,28 @@ ICMPStatus ICMPProtocol::sendEchoRequest(SOCKET socket, uint8_t * addr, const IC
     // Add check sum.
     CalcChecksum(icmpPacket);
     
-    W5200.writeSnDIPR(socket, addr);
-    W5200.writeSnTTL(socket, TTL);
+    W5100.writeSnDIPR(socket, addr);
+    W5100.writeSnTTL(socket, TTL);
     // The port isn't used, because ICMP is a network-layer protocol. So we
     // write zero. This probably isn't actually necessary.
-    W5200.writeSnDPORT(socket, 0);
+    W5100.writeSnDPORT(socket, 0);
 
     // Send packet.
-    W5200.send_data_processing(socket, icmpPacket, ICMP_PACKET_SIZE);
-    W5200.execCmdSn(socket, Sock_SEND);
+    W5100.send_data_processing(socket, icmpPacket, ICMP_PACKET_SIZE);
+    W5100.execCmdSn(socket, Sock_SEND);
 
     // Waiting to send.
-    while ((W5200.readSnIR(socket) & SnIR::SEND_OK) != SnIR::SEND_OK)
+    while ((W5100.readSnIR(socket) & SnIR::SEND_OK) != SnIR::SEND_OK)
     {
         // If send timeout.
-        if (W5200.readSnIR(socket) & SnIR::TIMEOUT)
+        if (W5100.readSnIR(socket) & SnIR::TIMEOUT)
         {
-            W5200.writeSnIR(socket, (SnIR::SEND_OK | SnIR::TIMEOUT));
+            W5100.writeSnIR(socket, (SnIR::SEND_OK | SnIR::TIMEOUT));
             return SEND_TIMEOUT;
         }
     }
     
-    W5200.writeSnIR(socket, SnIR::SEND_OK);
+    W5100.writeSnIR(socket, SnIR::SEND_OK);
 
     return SUCCESS;
 }
@@ -208,12 +208,12 @@ void ICMPProtocol::receiveEchoReply(SOCKET socket, ICMPHeader& reqHdr, ICMPEchoR
     // Waiting for reply.
     while (millis() < endTime)
     {
-        if (W5200.getRXReceivedSize(socket))
+        if (W5100.getRXReceivedSize(socket))
         {
             // Read IP header.
             uint8_t ipHeader [6];
-            uint8_t buffer = W5200.readSnRX_RD(socket);
-            W5200.read_data(socket, (uint8_t *)buffer, ipHeader, sizeof(ipHeader));
+            uint16_t buffer = W5100.readSnRX_RD(socket);
+            W5100.read_data(socket, buffer, ipHeader, sizeof(ipHeader));
             buffer += sizeof(ipHeader);
             
             // Fill IP address.
@@ -230,11 +230,11 @@ void ICMPProtocol::receiveEchoReply(SOCKET socket, ICMPHeader& reqHdr, ICMPEchoR
             if (dataLen > ICMP_HEADER_SIZE)
                 dataLen = ICMP_HEADER_SIZE;
             
-            W5200.read_data(socket, (uint8_t *)buffer, icmpHdrBuff, dataLen);
+            W5100.read_data(socket, buffer, icmpHdrBuff, dataLen);
             
             buffer += dataLen;
-            W5200.writeSnRX_RD(socket, buffer);
-            W5200.execCmdSn(socket, Sock_RECV);
+            W5100.writeSnRX_RD(socket, buffer);
+            W5100.execCmdSn(socket, Sock_RECV);
 
             uint8_t * icmpPtr = icmpHdrBuff;
             // Read type.
@@ -251,7 +251,7 @@ void ICMPProtocol::receiveEchoReply(SOCKET socket, ICMPHeader& reqHdr, ICMPEchoR
             // to see if it originated from the request we sent out.
             if (type == ICMP_ECHOREP && id == reqHdr.id && echoReply.seq == reqHdr.seq)
             {
-                echoReply.ttl = W5200.readSnTTL(socket);
+                echoReply.ttl = W5100.readSnTTL(socket);
                 echoReply.status = SUCCESS;
                 return;
             }
