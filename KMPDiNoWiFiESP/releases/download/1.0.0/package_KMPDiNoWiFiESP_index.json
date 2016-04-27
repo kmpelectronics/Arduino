@@ -15,7 +15,7 @@
           "help": {
             "online": "http://esp8266.github.com/Arduino/versions/2.1.0/"
           },
-          "version": "2.1.0",
+          "version": "1.0.0",
           "architecture": "esp8266",
           "archiveFileName": "KMPDiNoWiFiESP-1.0.0.zip",
           "boards": [
