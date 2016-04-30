@@ -11,7 +11,7 @@
           "category": "KMP_ESP8266",
           "name": "KMP_esp8266",
           "url": "https://github.com/kmpelectronics/Arduino/blob/master/KMPDiNoWiFiESP/releases/download/1.0.0/KMPDiNoWiFiESP-1.0.0.zip?raw=true",
-          "checksum": "SHA-256:F6A9E33AFE854F661740BCA8BA73E78FD84932D19656E0530701CE1EB78907F4",
+          "checksum": "SHA-256:f6a9e33afe854f661740bca8ba73e78fd84932d19656e0530701ce1eb78907f4",
           "help": {
             "online": "http://esp8266.github.com/Arduino/versions/2.1.0/"
           },
