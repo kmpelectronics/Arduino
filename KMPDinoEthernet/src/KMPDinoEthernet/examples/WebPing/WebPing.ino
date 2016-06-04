@@ -11,14 +11,14 @@
 // Version: 1.2.0
 // Date: 29.11.2015
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-// Description: Compatibilie Arduinio version >= 1.6.5
+// Description: Compatible Arduino version >= 1.6.5
 
 #include <SPI.h>
 #include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
 
-// ICMP heders.
+// ICMP headers.
 #include "ICMPProtocol.h"
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
@@ -175,7 +175,7 @@ bool ReadClientRequest()
         requestLen++;
         char c = _client.read();
 
-        // Calculate line len only for chars, exclude CR LF.
+        // Calculate line length only for chars, exclude CR LF.
         if(c != CH_CR && c != CH_LF)
         {
             lineLen++;
@@ -330,7 +330,8 @@ void PingIP(uint8_t* address)
 {
 #ifdef DEBUG
     Serial.print("Ping IP address: ");
-    Serial.println(address);
+    iptoa(address, _buffer);
+    Serial.println(_buffer);
 #endif
     // Ping id = 0x0400 is for windows.
     ICMPEchoReply echoReply = _icmp.Ping(address, 0x0400, 1);
@@ -341,7 +342,8 @@ void PingIP(uint8_t* address)
         Serial.print("Reply ");
         Serial.print(echoReply.seq);
         Serial.print(" from ");
-        Serial.print(echoReply.addr);
+		iptoa(echoReply.addr, _buffer);
+		Serial.print(_buffer);
         Serial.print(" bytes=");
         Serial.print(PAYLOAD_DATA_SIZE);
         Serial.print(" time=");
