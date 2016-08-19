@@ -8,35 +8,14 @@
 //		KMP ProDiNo NETBOARD V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
 // Description:
 //		ProDino Internet relay, Bulgaria
-// Version: 1.0.0
-// Date: 21.12.2014
+// Version: 1.0.2
+// Date: 19.08.2016
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
-// Headers for version before 1.6.6
-#include <SPI.h>
-#include "./Ethernet.h"
-#include "KmpDinoEthernet.h"
-#include "ICMPProtocol.h"
+#include <Ethernet.h>
 #include "Structures.h"
 #include "Processing.h"
 #include <avr/wdt.h>
-// Headers for version >= 1.6.6
-/*
-#include <Base64.h>
-#include <DallasTemperature.h>
-#include <Dhcp.h>
-#include <Dns.h>
-#include <Ethernet.h>
-#include <EthernetClient.h>
-#include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <ICMPProtocol.h>
-#include <KMPCommon.h>
-#include <KmpDinoEthernet.h>
-#include <OneWire.h>
-#include <util.h>
-#include <w5200.h>
-*/
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
 // This method is good for development and verification of results. But increases the amount of code and decreases productivity.
@@ -199,7 +178,8 @@ void loop(){
             PrintDebugInfo();
 #endif
             // Set IP-s. Prevent missing IP-s from W5200 and lost connection.
-            Ethernet.setAddresses(DeviceData.IP, DeviceData.Gateway, DeviceData.SubnetMask, (uint8_t*)MAC_ADDRESS);
+			//Ethernet.setAddresses(DeviceData.IP, DeviceData.Gateway, DeviceData.SubnetMask, (uint8_t*)MAC_ADDRESS);
+			Ethernet.begin((uint8_t *)MAC_ADDRESS, DeviceData.IP, DeviceData.Gateway, DeviceData.SubnetMask);
  
             // Next time after 10 seconds.            
             _timeToSetAddresses = millis() + SET_ADDRESS_TIME;

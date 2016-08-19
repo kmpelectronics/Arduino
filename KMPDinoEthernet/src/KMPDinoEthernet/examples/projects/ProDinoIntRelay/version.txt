@@ -1,6 +1,9 @@
 Company: KMP Electronics Ltd, Bulgaria
 Project: ProDino Internet Relay
 
+20160819
+1.0.2 - Support new version KMPDinoEthernet library.
+
 1.0.1 - Fix debug mode.
 
 History:

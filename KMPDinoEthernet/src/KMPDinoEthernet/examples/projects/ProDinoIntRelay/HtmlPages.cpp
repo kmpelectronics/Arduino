@@ -625,7 +625,7 @@ void HtmlPages::privateUserAndIP(DeviceSetting& deviceSettings, ValidationData* 
 	htmlHeader200OK(true);
 	pageHead(WP_USERANDIP);
 	    
-	menuAndTitle(CH_NONE/*WEB_PAGE_NAME[WP_PRIVATE_USERANDIP]*/, WEB_PAGE_NAME[WP_INDEX], WEB_PAGE_LINK[WP_INDEX], WEB_PAGE_NAME[WP_SETTINGS], WEB_PAGE_LINK[WP_SETTINGS]);
+	menuAndTitle(NULL/*WEB_PAGE_NAME[WP_PRIVATE_USERANDIP]*/, WEB_PAGE_NAME[WP_INDEX], WEB_PAGE_LINK[WP_INDEX], WEB_PAGE_NAME[WP_SETTINGS], WEB_PAGE_LINK[WP_SETTINGS]);
     ShowMessageInfo(showError, showSuccess);
 
 	privateUserAndIPContent(deviceSettings, validData);
