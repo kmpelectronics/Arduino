@@ -8,8 +8,7 @@
 //		KMP ProDiNo NETBOARD V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
 // Description:
 //		ProDino Internet relay, Bulgaria
-// Version: 1.0.2
-// Date: 19.08.2016
+// Date: 22.08.2016
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include <Ethernet.h>
@@ -53,7 +52,7 @@ void setup()
 {
 #ifdef DEBUG
     // Open serial communications and wait for port to open:
-    Serial.begin(9600);
+    Serial.begin(19200);
     while (!Serial) {
     	; // wait for serial port to connect. Needed for Leonardo only. If need debug setup() void.
     }
@@ -124,7 +123,7 @@ void PrintDebugInfo()
     iptoa(_macBuff, _ipBuff);
     Serial.println(_ipBuff);
 
-    Ethernet.macAddress(_macBuff);
+	W5100.getMACAddress(_macBuff);
     for (int i = 0; i < 6; i++)
     {
         ByteToHexStr(_macBuff[i], _ipBuff);
