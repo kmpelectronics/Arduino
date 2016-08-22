@@ -8,6 +8,7 @@
 //		KMP ProDiNo NETBOARD V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
 // Description:
 //		ProDino Internet relay, Bulgaria
+// Version: 1.0.3
 // Date: 22.08.2016
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
