@@ -1,0 +1,88 @@
+menu.UploadSpeed=Upload Speed
+menu.CpuFrequency=CPU Frequency
+menu.FlashSize=Flash Size
+menu.FlashMode=Flash Mode
+menu.FlashFreq=Flash Frequency
+menu.ResetMethod=Reset Method
+menu.ESPModule=Module
+menu.Debug=Debug port
+menu.DebugLevel=Debug Level
+menu.LwIPVariant=lwIP Variant
+
+##############################################################
+prodinowifiesp.name=KMP PRODINo WiFi-ESP
+
+prodinowifiesp.upload.tool=esptool
+prodinowifiesp.upload.speed=115200
+prodinowifiesp.upload.resetmethod=nodemcu
+prodinowifiesp.upload.maximum_size=434160
+prodinowifiesp.upload.maximum_data_size=81920
+prodinowifiesp.upload.wait_for_upload_port=true
+prodinowifiesp.serial.disableDTR=true
+prodinowifiesp.serial.disableRTS=true
+
+prodinowifiesp.build.mcu=esp8266
+prodinowifiesp.build.f_cpu=80000000L
+prodinowifiesp.build.board=PRODINOWIFIESP_WROOM-02
+prodinowifiesp.build.core=esp8266
+prodinowifiesp.build.variant=prodinowifiesp
+prodinowifiesp.build.flash_mode=qio
+prodinowifiesp.build.flash_size=4M
+prodinowifiesp.build.flash_ld=eagle.flash.512k64.ld
+prodinowifiesp.build.flash_freq=40
+prodinowifiesp.build.spiffs_start=0x6B000
+prodinowifiesp.build.spiffs_end=0x7B000
+prodinowifiesp.build.spiffs_blocksize=4096
+prodinowifiesp.build.spiffs_pagesize=256
+prodinowifiesp.build.debug_port=
+prodinowifiesp.build.debug_level=
+prodinowifiesp.build.lwip_lib=-llwip
+prodinowifiesp.build.lwip_flags=
+
+prodinowifiesp.menu.CpuFrequency.80=80 MHz
+prodinowifiesp.menu.CpuFrequency.80.build.f_cpu=80000000L
+
+prodinowifiesp.menu.FlashFreq.40=40MHz
+prodinowifiesp.menu.FlashFreq.40.build.flash_freq=40
+
+prodinowifiesp.menu.FlashMode.qio=QIO
+prodinowifiesp.menu.FlashMode.qio.build.flash_mode=qio
+
+prodinowifiesp.menu.UploadSpeed.115200=115200
+prodinowifiesp.menu.UploadSpeed.115200.upload.speed=115200
+prodinowifiesp.menu.UploadSpeed.9600=9600
+prodinowifiesp.menu.UploadSpeed.9600.upload.speed=9600
+prodinowifiesp.menu.UploadSpeed.57600=57600
+prodinowifiesp.menu.UploadSpeed.57600.upload.speed=57600
+prodinowifiesp.menu.UploadSpeed.256000.windows=256000
+prodinowifiesp.menu.UploadSpeed.256000.upload.speed=256000
+prodinowifiesp.menu.UploadSpeed.230400.linux=230400
+prodinowifiesp.menu.UploadSpeed.230400.macosx=230400
+prodinowifiesp.menu.UploadSpeed.230400.upload.speed=230400
+prodinowifiesp.menu.UploadSpeed.460800.linux=460800
+prodinowifiesp.menu.UploadSpeed.460800.macosx=460800
+prodinowifiesp.menu.UploadSpeed.460800.upload.speed=460800
+prodinowifiesp.menu.UploadSpeed.512000.windows=512000
+prodinowifiesp.menu.UploadSpeed.512000.upload.speed=512000
+prodinowifiesp.menu.UploadSpeed.921600=921600
+prodinowifiesp.menu.UploadSpeed.921600.upload.speed=921600
+
+prodinowifiesp.menu.FlashSize.4M1M=4M (1M SPIFFS)
+prodinowifiesp.menu.FlashSize.4M1M.build.flash_size=4M
+prodinowifiesp.menu.FlashSize.4M1M.build.flash_ld=eagle.flash.4m1m.ld
+prodinowifiesp.menu.FlashSize.4M1M.build.spiffs_start=0x300000
+prodinowifiesp.menu.FlashSize.4M1M.build.spiffs_end=0x3FB000
+prodinowifiesp.menu.FlashSize.4M1M.build.spiffs_blocksize=8192
+prodinowifiesp.menu.FlashSize.4M1M.build.spiffs_pagesize=256
+prodinowifiesp.menu.FlashSize.4M1M.upload.maximum_size=1044464
+
+prodinowifiesp.menu.FlashSize.4M3M=4M (3M SPIFFS)
+prodinowifiesp.menu.FlashSize.4M3M.build.flash_size=4M
+prodinowifiesp.menu.FlashSize.4M3M.build.flash_ld=eagle.flash.4m.ld
+prodinowifiesp.menu.FlashSize.4M3M.build.spiffs_start=0x100000
+prodinowifiesp.menu.FlashSize.4M3M.build.spiffs_end=0x3FB000
+prodinowifiesp.menu.FlashSize.4M3M.build.spiffs_blocksize=8192
+prodinowifiesp.menu.FlashSize.4M3M.upload.maximum_size=1044464
+
+prodinowifiesp.menu.ResetMethod.nodemcu=nodemcu
+prodinowifiesp.menu.ResetMethod.nodemcu.upload.resetmethod=nodemcu
