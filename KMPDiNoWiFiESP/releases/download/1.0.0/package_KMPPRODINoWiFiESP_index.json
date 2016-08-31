@@ -13,14 +13,14 @@
           "name": "prodinowifiesp",
           "category": "KMPPRODINoESP",
           "url": "https://github.com/kmpelectronics/Arduino/blob/master/KMPDiNoWiFiESP/releases/download/1.0.0/KMPPRODINoWiFiESP.zip?raw=true",
-          "checksum": "SHA-256:9C0AF7660E99F647A209EE5E071B2DEEB3FA2F96238D8CBF9F1B9F59F4E93098",
+          "checksum": "SHA-256:C1D986183FD06C7FFE3F619F10821C2DEBF92FE0A800635F56F307ADB778631F",
+          "size": "5393132",
           "help": {
             "online": "http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx"
           },
           "version": "1.0.0",
           "architecture": "esp",
           "archiveFileName": "kmpprodinowifiesp-1.0.0.zip",
-          "size": "5396508",
           "boards": [
             {
               "name": "KMP ProDino WiFi-ESP"
