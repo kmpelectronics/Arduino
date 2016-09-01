@@ -11,7 +11,7 @@
       "platforms": [
         {
           "name": "KMPPRODINoWiFiESP",
-          "category": "KMPPRODINoWiFiESP",
+          "category": "KMP",
           "url": "https://github.com/kmpelectronics/Arduino/blob/master/KMPDiNoWiFiESP/releases/KMPPRODINoWiFiESP-1.0.0.zip?raw=true",
           "checksum": "SHA-256:4AE745A3DA765DD061C572F17303CACB9E978C4B62729275C7A687DCBD8DA6BB",
           "size": "11037386",
@@ -28,17 +28,17 @@
           ],
           "toolsDependencies": [
             {
-              "packager": "esp8266",
+              "packager": "KMP",
               "version": "0.4.9",
               "name": "esptool"
             },
             {
-              "packager": "esp8266",
+              "packager": "KMP",
               "version": "1.20.0-26-gb404fb9-2",
               "name": "xtensa-lx106-elf-gcc"
             },
             {
-              "packager": "esp8266",
+              "packager": "KMP",
               "version": "0.1.2",
               "name": "mkspiffs"
             }
