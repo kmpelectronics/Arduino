@@ -28,17 +28,17 @@
           ],
           "toolsDependencies": [
             {
-              "packager": "esp8266",
+              "packager": "prodinoesp8266",
               "name": "esptool",
               "version": "0.4.9"
             },
             {
-              "packager": "esp8266",
+              "packager": "prodinoesp8266",
               "name": "xtensa-lx106-elf-gcc",
               "version": "1.20.0-26-gb404fb9-2"
             },
             {
-              "packager": "esp8266",
+              "packager": "prodinoesp8266",
               "name": "mkspiffs",
               "version": "0.1.2"
             }
