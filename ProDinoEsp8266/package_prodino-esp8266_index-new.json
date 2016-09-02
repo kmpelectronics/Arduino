@@ -3,7 +3,7 @@
     {
       "name": "prodinoesp8266",
       "maintainer": "KMP Electronics LTD",
-      "websiteURL": "https://github.com/esp8266/Arduino",
+      "websiteURL": "https://github.com/kmpelectronics/Arduino/tree/master/ProDinoEsp8266",
       "email": "ivan@esp8266.com",
       "help": {
         "online": "http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx"
