@@ -1,9 +1,8 @@
 // WiFiWeb1WireSrv.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: http://kmpelectronics.eu/
-// License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards:
-//		KMP ProDino WiFi-ESP with ESP8266 V1.1 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
 //		Web server 1 Wire measure temperature with DS18B20 example.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiweb1wiresrv.aspx
@@ -29,8 +28,8 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const char SSID[] = "HomeNet";
-const char PASSWORD[] = "Bojur2WiFi";
+const char SSID[] = "*******";
+const char PASSWORD[] = "*******";
 const uint8_t HTTP_PORT = 80;
 
 const char WHITE[] = "white";

@@ -16,8 +16,8 @@
           "category": "ESP8266",
           "url": "https://github.com/kmpelectronics/Arduino/blob/master/ProDinoEsp8266/releases/prodinoesp8266-1.0.0.zip?raw=true",
           "archiveFileName": "prodinoesp8266-1.0.0.zip",
-          "checksum": "SHA-256:3120283C1EDA3FD2F7B78D35ACD1F59FADD5CD0DD85E61646D5936B66FE1E04E",
-          "size": "11036644",
+          "checksum": "SHA-256:32466578C662B0DD6FCAAD8481F8AB3F7CA79092A116675C9416850AD3A248A3",
+          "size": "5825495",
           "help": {
             "online": "http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx"
           },

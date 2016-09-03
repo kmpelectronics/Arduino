@@ -1,9 +1,8 @@
 // WiFiBlynkFull.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: http://kmpelectronics.eu/
-// License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards:
-//		KMP ProDino WiFi-ESP with ESP8266 V1.1 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
 //		Blynk example. For this example need add in Blynk mobile application 4 button (200), 4 LEDs(100) and 2 value display(200). All 1600 points.
 //		Free points in Blynk application is 1200. If you do not want to buy points, use the example: WiFiBlynk.ino
@@ -45,10 +44,10 @@
 #include <BlynkSimpleEsp8266.h>
 
 // You should get Auth Token in the Blynk App.
-char AUTH_TOKEN[] = "75d232695fc242e4b74bdac612e0d721";
+char AUTH_TOKEN[] = "abcdef12345678901234567890123456";
 
-const char SSID[] = "HomeNet";
-const char PASSWORD[] = "Bojur2WiFi";
+const char SSID[] = "*******";
+const char PASSWORD[] = "*******";
 const uint8_t HTTP_PORT = 80;
 
 // Define sensors structure.

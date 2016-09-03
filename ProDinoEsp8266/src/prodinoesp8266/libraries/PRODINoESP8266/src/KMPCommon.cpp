@@ -1,7 +1,6 @@
 // KMPCommon.cpp
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: http://kmpelectronics.eu/
-// License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Description:
 //		Common library.
 // Version: 1.0.0

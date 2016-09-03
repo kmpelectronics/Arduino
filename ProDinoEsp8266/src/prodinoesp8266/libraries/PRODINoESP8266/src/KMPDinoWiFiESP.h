@@ -1,9 +1,8 @@
 // KMPDinoWiFiESP.h
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: http://kmpelectronics.eu/
-// License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards: 
-//		KMP DiNo WiFi V1.0 (http://kmpelectronics.eu/en-us/products/dinowifi.aspx)
+//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
 //		Header for KMP Dino WiFi board.
 // Version: 1.0.0
