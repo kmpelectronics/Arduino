@@ -48,6 +48,8 @@ prodino.menu.FlashFreq.40.build.flash_freq=40
 prodino.menu.FlashMode.qio=QIO
 prodino.menu.FlashMode.qio.build.flash_mode=qio
 
+prodino.menu.UploadSpeed.921600=921600
+prodino.menu.UploadSpeed.921600.upload.speed=921600
 prodino.menu.UploadSpeed.9600=9600
 prodino.menu.UploadSpeed.9600.upload.speed=9600
 prodino.menu.UploadSpeed.57600=57600
@@ -64,8 +66,6 @@ prodino.menu.UploadSpeed.460800.macosx=460800
 prodino.menu.UploadSpeed.460800.upload.speed=460800
 prodino.menu.UploadSpeed.512000.windows=512000
 prodino.menu.UploadSpeed.512000.upload.speed=512000
-prodino.menu.UploadSpeed.921600=921600
-prodino.menu.UploadSpeed.921600.upload.speed=921600
 
 prodino.menu.FlashSize.4M1M=4M (1M SPIFFS)
 prodino.menu.FlashSize.4M1M.build.flash_size=4M
