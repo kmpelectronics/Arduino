@@ -10,7 +10,7 @@
       },
       "platforms": [
         {
-          "name": "esp8266",
+          "name": "PRODINo WiFi board",
           "architecture": "esp8266",
           "version": "1.0.0",
           "category": "ESP8266",
