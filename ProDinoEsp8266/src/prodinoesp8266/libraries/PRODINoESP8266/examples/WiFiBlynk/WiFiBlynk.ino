@@ -40,8 +40,8 @@
 // You should get Auth Token in the Blynk App.
 char AUTH_TOKEN[] = "abcdef12345678901234567890123456";
 
-const char SSID[] = "*******";
-const char PASSWORD[] = "*******";
+const char SSID[] = "your_wifi_ssid";
+const char SSID_PASSWORD[] = "your_wifi_ssid_password";
 const uint8_t HTTP_PORT = 80;
 
 // Define sensors structure.
@@ -93,7 +93,7 @@ void setup(void)
 	// Init KMP ProDino WiFi-ESP board.
 	KMPDinoWiFiESP.init();
 
-	Blynk.begin(AUTH_TOKEN, SSID, PASSWORD);
+	Blynk.begin(AUTH_TOKEN, SSID, SSID_PASSWORD);
 
 	// Start sensors.
 	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
