@@ -16,7 +16,7 @@
 //			- One wire: https://github.com/PaulStoffregen/OneWire
 //			- DallasTemperature library: https://github.com/milesburton/Arduino-Temperature-Control-Library
 //		Connect DS18B20 sensor(s) to GROVE connector. Use pins: 
-//			- GROVE_PIN1, VCC+, GND(-);
+//			- EXT_GROVE_D0, VCC+, GND(-);
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
@@ -45,7 +45,7 @@ const char DEGREE_SYMBOL[] = "&deg;";
 // Bits - CONVERSION TIME. 9 - 93.75ms, 10 - 187.5ms, 11 - 375ms, 12 - 750ms. 
 #define TEMPERATURE_PRECISION 9
 
-#define SENSORS_PIN GROVE_PIN1
+#define SENSORS_PIN EXT_GROVE_D0
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire _oneWire(SENSORS_PIN);
