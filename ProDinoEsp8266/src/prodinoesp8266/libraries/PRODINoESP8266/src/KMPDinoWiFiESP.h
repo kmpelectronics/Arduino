@@ -104,4 +104,3 @@ class KMPDinoWiFiESPClass
 extern KMPDinoWiFiESPClass KMPDinoWiFiESP;
 
 #endif
-

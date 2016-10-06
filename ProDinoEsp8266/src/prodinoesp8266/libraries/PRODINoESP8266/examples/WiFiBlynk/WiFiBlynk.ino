@@ -38,7 +38,7 @@
 #include <BlynkSimpleEsp8266.h>
 
 // You should get Auth Token in the Blynk App.
-char AUTH_TOKEN[] = "abcdef12345678901234567890123456";
+char AUTH_TOKEN[] = "1234567890abcdef1234567890abcde";
 
 const char SSID[] = "your_wifi_ssid";
 const char SSID_PASSWORD[] = "your_wifi_ssid_password";
