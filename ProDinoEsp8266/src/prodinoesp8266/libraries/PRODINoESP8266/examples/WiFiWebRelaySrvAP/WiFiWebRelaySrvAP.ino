@@ -23,6 +23,7 @@ ESP8266WebServer _server(HTTP_PORT);
 
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
+const char* APID = "KMP ProDino WiFi-ESP";
 
 /**
  * @brief Execute first after start device. Initialize hardware.
@@ -42,10 +43,9 @@ void setup(void)
 	// Setup WiFi AP.
 	WiFi.mode(WIFI_AP);
 
+	// If you have many devices this is generate unique SSID.
 	// Get a unique name, append the last two bytes of the MAC (HEX'd) to device name.
-	String mac = WiFi.softAPmacAddress(); // 5E:CF:7F:81:70:3E
-	String apName = "KMP ProDino WiFi-ESP "
-		+ mac.substring(12);
+	String apName = APID + String(" ") + WiFi.softAPmacAddress().substring(12);// 5E:CF:7F:81:70:3E
 
 	Serial.print("AP name: ");
 	Serial.println(apName);

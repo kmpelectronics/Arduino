@@ -95,7 +95,8 @@ class KMPDinoWiFiESPClass
 	void RS485End();
 	size_t RS485Write(uint8_t data);
 	size_t RS485Write(char data);
-	size_t RS485Write(char* data);
+	size_t RS485Write(const char* data);
+	size_t RS485Write(String data) { return RS485Write(data.c_str()); }
 	size_t RS485Write(uint8_t* data, uint8_t dataLen);
 	int RS485Read();
 	int RS485Read(unsigned long delayWait, uint8_t repeatTime);

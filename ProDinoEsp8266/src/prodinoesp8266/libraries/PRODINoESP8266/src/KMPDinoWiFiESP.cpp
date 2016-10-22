@@ -445,7 +445,7 @@ size_t KMPDinoWiFiESPClass::RS485Write(char data)
 *
 * @return size_t Count of transmitted chars.
 */
-size_t KMPDinoWiFiESPClass::RS485Write(char* data)
+size_t KMPDinoWiFiESPClass::RS485Write(const char* data)
 {
 	RS485BeginWrite();
 
