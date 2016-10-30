@@ -5,8 +5,9 @@
 //		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
 //		Source file for KMP Dino WiFi board.
-// Version: 1.0.0
-// Date: 17.06.2016
+// Version: 1.0.1
+// 	Fix RS485Read operation
+// Date: 30.10.2016
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
 #include "KMPDinoWiFiESP.h"
@@ -510,11 +511,16 @@ int KMPDinoWiFiESPClass::RS485Read()
 */
 int KMPDinoWiFiESPClass::RS485Read(unsigned long delayWait, uint8_t repeatTime)
 {
-	// Wait before read, if the buffer is empty.
-	while (Serial.available() == 0 && repeatTime > 0)
+	// If the buffer empty, wait until the data arrive.
+	while (!Serial.available())
 	{
 		delay(delayWait);
 		--repeatTime;
+
+		if (repeatTime == 0)
+		{
+			return -1;
+		}
 	}
 
 	return Serial.read();
