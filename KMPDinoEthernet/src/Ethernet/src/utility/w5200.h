@@ -289,9 +289,15 @@ private:
   // inline static void resetSS()   { PORTB |=  _BV(6); }; 
 // KMP Electronics configuration.
 #elif defined(__AVR_ATmega32U4__)
-  inline static void initSS()    { DDRB  |=  _BV(4); };
-  inline static void setSS()     { PORTB &= ~_BV(4); };
-  inline static void resetSS()   { PORTB |=  _BV(4); }; 
+	#if defined(KMPDINOETHERNET)
+	  inline static void initSS()    { DDRB  |=  _BV(4); };
+	  inline static void setSS()     { PORTB &= ~_BV(4); };
+	  inline static void resetSS()   { PORTB |=  _BV(4); }; 
+	#else
+	   inline static void initSS()    { DDRB  |=  _BV(6); };
+	   inline static void setSS()     { PORTB &= ~_BV(6); };
+	   inline static void resetSS()   { PORTB |=  _BV(6); }; 
+	#endif // defined(KMPDINOETHERNET)
 #elif defined(__AVR_AT90USB1286__) || defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB162__)
   inline static void initSS()    { DDRB  |=  _BV(0); };
   inline static void setSS()     { PORTB &= ~_BV(0); };

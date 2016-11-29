@@ -18,6 +18,7 @@ typedef uint8_t SOCKET;
 
 //#define W5100_ETHERNET_SHIELD // Default. Arduino Ethernet Shield and Compatibles ...
 #define W5200_ETHERNET_SHIELD // WIZ820io, W5200 Ethernet Shield 
+#define KMPDINOETHERNET // This is set KMP board W5200 specific configuration.
 //#define W5500_ETHERNET_SHIELD   // WIZ550io, ioShield series of WIZnet
 
 #ifdef W5500_ETHERNET_SHIELD
