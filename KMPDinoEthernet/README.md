@@ -20,8 +20,8 @@ In a file Ethernet\src\utility\w5100.h has block, which chip is using  at the mo
 By default for ProDiNo NetBoard V2.1 board we use W5200_ETHERNET_SHIELD and KMPDINOETHERNET.
 
 >//#define W5100_ETHERNET_SHIELD // Default. Arduino Ethernet Shield and Compatibles ...
->#define W5200_ETHERNET_SHIELD // WIZ820io, W5200 Ethernet Shield 
->#define KMPDINOETHERNET // This is set KMP board W5200 specific configuration.
+> #define W5200_ETHERNET_SHIELD // WIZ820io, W5200 Ethernet Shield 
+> #define KMPDINOETHERNET // This is set KMP board W5200 specific configuration.
 >//#define W5500_ETHERNET_SHIELD   // WIZ550io, ioShield series of WIZnet
 
 If you use standard **Arduino Ethernet shield with W5100**, you have to make follow changes:
