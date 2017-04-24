@@ -12,6 +12,41 @@
         {
           "name": "PRODINo WiFi board",
           "architecture": "esp8266",
+          "version": "1.0.2",
+          "category": "ESP8266",
+          "url": "https://github.com/kmpelectronics/Arduino/blob/master/ProDinoEsp8266/releases/prodinoesp8266-1.0.1.zip?raw=true",
+          "archiveFileName": "prodinoesp8266-1.0.2.zip",
+          "checksum": "SHA-256:C07DB48FD0774B813F4C07568752B413570512B70AED5F1E7F128367DFB1F6BE",
+          "size": "5828004",
+          "help": {
+            "online": "http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx"
+          },
+          "boards": [
+            {
+              "name": "PRODINo WiFi-ESP WROOM-02"
+            }
+          ],
+          "toolsDependencies": [
+            {
+              "packager": "prodinoesp8266",
+              "name": "esptool",
+              "version": "0.4.9"
+            },
+            {
+              "packager": "prodinoesp8266",
+              "name": "xtensa-lx106-elf-gcc",
+              "version": "1.20.0-26-gb404fb9-2"
+            },
+            {
+              "packager": "prodinoesp8266",
+              "name": "mkspiffs",
+              "version": "0.1.2"
+            }
+          ]
+        },
+        {
+          "name": "PRODINo WiFi board",
+          "architecture": "esp8266",
           "version": "1.0.1",
           "category": "ESP8266",
           "url": "https://github.com/kmpelectronics/Arduino/blob/master/ProDinoEsp8266/releases/prodinoesp8266-1.0.1.zip?raw=true",

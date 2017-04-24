@@ -154,9 +154,13 @@ String BuildPage()
 		+ "<table border='1' width='450' cellpadding='5' cellspacing='0' align='center' style='text-align:center; font-size:large; font-family:Arial,Helvetica,sans-serif;'>"
 		+ "<thead><tr><th></th><th>C&deg;</th><th>F&deg;</th></tr></thead>";
 
+	int deviceCount = _sensors.getDeviceCount();
+
+	_sensors.requestTemperatures();
+
 	// Add table rows.
 	String tableBody = "<tbody>";
-	for (int i = 0; i < _sensors.getDeviceCount(); i++)
+	for (int i = 0; i < deviceCount; i++)
 	{
 		// Default color.
 		const char* cellColor = GRAY;
