@@ -13,9 +13,9 @@
 // --------------------------------------------------------------------------------
 // Prerequisites:
 //		Before start this example you need to install DHT library: https://github.com/adafruit/DHT-sensor-library
-//		Connect DHT22 sensor to GROVE connector. Use pins: 
-//			- first sensor GROVE_PIN1, Vcc+, Gnd(-);
-//			- second sensor GROVE_PIN2, Vcc+, Gnd(-);
+//		Connect DHT22 sensor to External GROVE connector. Use pins: 
+//			- first sensor EXT_GROVE_D0, Vcc+, Gnd(-);
+//			- second sensor EXT_GROVE_D1, Vcc+, Gnd(-);
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
@@ -24,8 +24,8 @@
 #include <ESP8266WebServer.h>
 #include <DHT.h>
 
-const char SSID[] = "*******";
-const char PASSWORD[] = "*******";
+const char SSID[] = "your_wifi_ssid";
+const char SSID_PASSWORD[] = "your_wifi_ssid_password";
 const uint8_t HTTP_PORT = 80;
 
 // Define sensors structure.
@@ -35,7 +35,7 @@ typedef struct
 	bool IsEnable;
 	// Name of sensor. Example: "First sensor".
 	String Name;
-	// DHT object with settings. Example: DHT(GROVE_PIN1 /* connected pin */, DHT22 /* sensor type */, 11 /* Constant for ESP8266 */)
+	// DHT object with settings. Example: DHT(EXT_GROVE_D0 /* connected pin */, DHT22 /* sensor type */, 11 /* Constant for ESP8266 */)
 	DHT dht;
 	// Store, read humidity from sensor.
 	float Humidity;
@@ -49,8 +49,8 @@ typedef struct
 // Define array of 2 sensors.
 MeasureHT_t _measureHT[SENSOR_COUNT] =
 {
-	{ true, "Sensor 1", DHT(GROVE_PIN1, DHT22, 11), NAN, NAN },
-	{ false, "Sensor 2", DHT(GROVE_PIN2, DHT11, 11), NAN, NAN }
+	{ true, "Sensor 1", DHT(EXT_GROVE_D0, DHT22, 11), NAN, NAN },
+	{ false, "Sensor 2", DHT(EXT_GROVE_D1, DHT22, 11), NAN, NAN }
 };
 
 // Gray color.
@@ -77,7 +77,7 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, PASSWORD);
+	WiFi.begin(SSID, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection

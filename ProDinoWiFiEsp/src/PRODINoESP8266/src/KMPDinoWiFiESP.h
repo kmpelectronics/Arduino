@@ -16,19 +16,31 @@
 #include <SPI.h>
 #include <HardwareSerial.h>
 
-// Count of inputs and outputs.
+// Inputs and outputs count.
 #define RELAY_COUNT  4
 #define OPTOIN_COUNT 4
 
 /**
- * @brief Grove connector first pin GPIO4/SDA.
+ * @brief External Grove connector, D0 pin GPIO5/SCL.
+ * @inf   The pin 5 is same for EXT_GROVE_D0 and INT_GROVE_D1.
  */
-#define	GROVE_PIN1	4 
+#define	EXT_GROVE_D0	5
 
 /**
- * @brief Grove connector first pin GPIO5/SCL.
+ * @brief External Grove connector, D1 pin GPIO4/SDA.
  */
-#define	GROVE_PIN2	5 
+#define	EXT_GROVE_D1	4
+
+/**
+ * @brief Internal Grove connector, A0 pin ADC.
+ */
+#define	INT_GROVE_A0	A0
+
+/**
+ * @brief Internal Grove connector, D1 pin GPIO5/SCL.
+ * @inf   The pin 5 is same for EXT_GROVE_D0 and INT_GROVE_D1.
+ */
+#define	INT_GROVE_D1	5
 
 /**
  * @brief Relays.
@@ -83,7 +95,8 @@ class KMPDinoWiFiESPClass
 	void RS485End();
 	size_t RS485Write(uint8_t data);
 	size_t RS485Write(char data);
-	size_t RS485Write(char* data);
+	size_t RS485Write(const char* data);
+	size_t RS485Write(String data) { return RS485Write(data.c_str()); }
 	size_t RS485Write(uint8_t* data, uint8_t dataLen);
 	int RS485Read();
 	int RS485Read(unsigned long delayWait, uint8_t repeatTime);
@@ -92,4 +105,3 @@ class KMPDinoWiFiESPClass
 extern KMPDinoWiFiESPClass KMPDinoWiFiESP;
 
 #endif
-

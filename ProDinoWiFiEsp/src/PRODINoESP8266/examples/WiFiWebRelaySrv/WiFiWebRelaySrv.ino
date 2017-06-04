@@ -16,8 +16,8 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 
-const char SSID[] = "*******";
-const char PASSWORD[] = "*******";
+const char SSID[] = "your_wifi_ssid";
+const char SSID_PASSWORD[] = "your_wifi_ssid_password";
 const uint8_t HTTP_PORT = 80;
 
 ESP8266WebServer _server(HTTP_PORT);
@@ -39,7 +39,7 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, PASSWORD);
+	WiFi.begin(SSID, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection

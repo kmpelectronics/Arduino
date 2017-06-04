@@ -16,7 +16,7 @@
 //			- One wire: https://github.com/PaulStoffregen/OneWire
 //			- DallasTemperature library: https://github.com/milesburton/Arduino-Temperature-Control-Library
 //		Connect DS18B20 sensor(s) to GROVE connector. Use pins: 
-//			- GROVE_PIN1, VCC+, GND(-);
+//			- EXT_GROVE_D0, VCC+, GND(-);
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
@@ -28,8 +28,8 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const char SSID[] = "*******";
-const char PASSWORD[] = "*******";
+const char SSID[] = "your_wifi_ssid";
+const char SSID_PASSWORD[] = "your_wifi_ssid_password";
 const uint8_t HTTP_PORT = 80;
 
 const char WHITE[] = "white";
@@ -45,7 +45,7 @@ const char DEGREE_SYMBOL[] = "&deg;";
 // Bits - CONVERSION TIME. 9 - 93.75ms, 10 - 187.5ms, 11 - 375ms, 12 - 750ms. 
 #define TEMPERATURE_PRECISION 9
 
-#define SENSORS_PIN GROVE_PIN1
+#define SENSORS_PIN EXT_GROVE_D0
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire _oneWire(SENSORS_PIN);
@@ -87,7 +87,7 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, PASSWORD);
+	WiFi.begin(SSID, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection
@@ -154,9 +154,13 @@ String BuildPage()
 		+ "<table border='1' width='450' cellpadding='5' cellspacing='0' align='center' style='text-align:center; font-size:large; font-family:Arial,Helvetica,sans-serif;'>"
 		+ "<thead><tr><th></th><th>C&deg;</th><th>F&deg;</th></tr></thead>";
 
+	int deviceCount = _sensors.getDeviceCount();
+
+	_sensors.requestTemperatures();
+
 	// Add table rows.
 	String tableBody = "<tbody>";
-	for (int i = 0; i < _sensors.getDeviceCount(); i++)
+	for (int i = 0; i < deviceCount; i++)
 	{
 		// Default color.
 		const char* cellColor = GRAY;
