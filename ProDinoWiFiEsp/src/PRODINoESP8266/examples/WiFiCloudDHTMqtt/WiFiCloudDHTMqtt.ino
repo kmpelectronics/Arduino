@@ -31,6 +31,7 @@ const char* TOPIC_INFO = "/KMP/ProDinoWiFi/Info";
 const char* TOPIC_INFO_DHT_T = "/KMP/ProDinoWiFi/Info/dhtt";
 const char* TOPIC_INFO_DHT_H = "/KMP/ProDinoWiFi/Info/dhth";
 const char* TOPIC_COMMAND = "/KMP/ProDinoWiFi/Cmd";
+const char* CMD_ALL = "all";
 const char* CMD_REL = "rel";
 const char* CMD_OPTOIN = "optoIn";
 const char* CMD_DHT_H = "dht";
@@ -59,6 +60,7 @@ bool _lastOptoInStatus[4] = { false };
 
 // Buffer by send output state.
 char _payload[16];
+bool _sendAllData;
 
 /**
 * @brief Execute first after start device. Initialize hardware.
@@ -77,6 +79,8 @@ void setup(void)
 
 	// Initialize MQTT.
 	_mqttClient.setCallback(callback);
+
+	_sendAllData = true;
 }
 
 /**
@@ -104,6 +108,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	}
 	Serial.println("]");
 
+	// Command send all data.
+	if (strncmp((const char*)payload, CMD_ALL, strlen(CMD_ALL)) == 0)
+	{
+		_sendAllData = true;
+		return;
+	}
+
+	// Relay command.
 	// Command structure: [command (rel):relay number (0..3):relay state (0 - Off, 1 - On)]. Example: rel:0:0 
 	size_t cmdRelLen = strlen(CMD_REL);
 
@@ -145,7 +157,7 @@ void PublishInformation()
 	for (byte i = 0; i < RELAY_COUNT; i++)
 	{
 		bool rState = KMPDinoWiFiESP.GetRelayState(i);
-		if (_lastRelayStatus[i] != rState)
+		if (_lastRelayStatus[i] != rState || _sendAllData)
 		{
 			_lastRelayStatus[i] = rState;
 			state[0] = rState ? '1' : '0';
@@ -157,7 +169,7 @@ void PublishInformation()
 	for (byte i = 0; i < OPTOIN_COUNT; i++)
 	{
 		bool oiState = KMPDinoWiFiESP.GetOptoInState(i);
-		if (_lastOptoInStatus[i] != oiState)
+		if (_lastOptoInStatus[i] != oiState || _sendAllData)
 		{
 			_lastOptoInStatus[i] = oiState;
 			state[0] = oiState ? '1' : '0';
@@ -168,6 +180,8 @@ void PublishInformation()
 	}
 
 	GetDHTSensorData();
+
+	_sendAllData = false;
 }
 
 /**
@@ -177,22 +191,20 @@ void PublishInformation()
 */
 void GetDHTSensorData()
 {
-	if (millis() > _mesureTimeout)
+	if (millis() > _mesureTimeout || _sendAllData)
 	{
 		_dhtSensor.read(true);
 		float humidity = _dhtSensor.readHumidity();
 		float temperature = _dhtSensor.readTemperature();
 
-		char state[20];
-
-		if (_humidity != humidity)
+		if (_humidity != humidity || _sendAllData)
 		{
 			FloatToChars(humidity, 1, _payload);
 			_humidity = humidity;
 			Publish(TOPIC_INFO_DHT_H, _payload);
 		}
 
-		if (_temperature != temperature)
+		if (_temperature != temperature || _sendAllData)
 		{
 			FloatToChars(temperature, 1, _payload);
 			_temperature = temperature;
@@ -255,9 +267,9 @@ bool ConnectWiFi()
 
 		Serial.print("IP address: ");
 		Serial.println(WiFi.localIP());
-
-		return true;
 	}
+
+	return true;
 }
 
 /**
@@ -285,4 +297,6 @@ bool ConnectMqtt()
 			delay(5000);
 		}
 	}
+
+	return _mqttClient.connected();
 }
