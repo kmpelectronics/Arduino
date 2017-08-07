@@ -23,8 +23,8 @@ const char* SSID_PASSWORD = "xxxx";
 const char* MQTT_SERVER = "xxx.cloudmqtt.com"; // xxx should be change with true value.
 const int MQTT_PORT = 13161;
 const char* MQTT_CLIENT_ID = "ESP8266Client";
-const char* MQTT_USER = "xxxxx"; // xxx should be change with true value.
-const char* MQTT_PASS = "xxxxx"; // xxx should be change with true value.
+const char* MQTT_USER = "xxxxx"; // xxxxx should be change with true value.
+const char* MQTT_PASS = "xxxxx"; // xxxxx should be change with true value.
 
 const char* TOPIC_INFO = "/KMP/ProDinoWiFi/Info";
 const char* TOPIC_COMMAND = "/KMP/ProDinoWiFi/Cmd";

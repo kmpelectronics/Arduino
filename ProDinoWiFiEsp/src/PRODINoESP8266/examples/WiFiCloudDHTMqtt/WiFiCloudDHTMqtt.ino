@@ -4,7 +4,8 @@
 // Supported boards:
 //    KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
-//    Cloud MQTT example with DHT support. In this example we show how to connect KMP ProDino WiFi-ESP WROOM-02 with Amazon cloudmqtt.com service and measure humidity and temperature with DHT22 sensor.
+//    Cloud MQTT example with DHT support. In this example we show how to connect KMP ProDino WiFi-ESP WROOM-02 with Amazon cloudmqtt.com service 
+//		and measure humidity and temperature with DHT22 sensor. For connect with WiFi we use WiFiManager.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebrelayserverap.aspx
 // Version: 1.0.0
 // Date: 04.06.2017
@@ -16,16 +17,16 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
-// Wifi authentication settings.
-const char* SSID = "xxxx";
-const char* SSID_PASSWORD = "xxxx";
+#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
-// MQTT server settings. 
-const char* MQTT_SERVER = "xxx.cloudmqtt.com"; // xxx should be change with true value.
-const int MQTT_PORT = 13161;
-const char* MQTT_CLIENT_ID = "ESP8266Client";
-const char* MQTT_USER = "xxxxx"; // xxx should be change with true value.
-const char* MQTT_PASS = "xxxxx"; // xxx should be change with true value.
+// MQTT server settings.
+const char* MQTT_SERVER = "xxx.cloudmqtt.com"; // Your xxx.cloudmqtt.com server.
+const int MQTT_PORT = 13161;                   // Your server port.
+const char* MQTT_CLIENT_ID = "ESP8266Client";  // Default server name.
+const char* MQTT_USER = "xxxxxxxx";            // Your xxxxxxxx MQTT server user.
+const char* MQTT_PASS = "xxxxxxxxxxxx";        // Your xxxxxxxxxxxx MQTT server user password.
 
 const char* TOPIC_INFO = "/KMP/ProDinoWiFi/Info";
 const char* TOPIC_INFO_DHT_T = "/KMP/ProDinoWiFi/Info/dhtt";
@@ -76,6 +77,24 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 
 	Serial.println("KMP Mqtt cloud client example.\r\n");
+
+	//WiFiManager
+	//Local initialization. Once its business is done, there is no need to keep it around
+	WiFiManager wifiManager;
+
+	// Is OptoIn 4 is On the board is resetting WiFi configuration.
+	if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
+	{
+		Serial.println("Resetting WiFi configuration...\r\n");
+		//reset saved settings
+		wifiManager.resetSettings();
+		Serial.println("WiFi configuration was reseted.\r\n");
+	}
+
+	//fetches ssid and pass from eeprom and tries to connect
+	//if it does not connect it starts an access point with the specified name
+	//auto generated name ESP + ChipID
+	wifiManager.autoConnect();
 
 	// Initialize MQTT.
 	_mqttClient.setCallback(callback);
@@ -145,7 +164,7 @@ void loop(void)
 }
 
 /**
-* @brief Publish information in MQTT server.
+* @brief Publish information in the MQTT server.
 *
 * @return void
 */
@@ -215,12 +234,14 @@ void GetDHTSensorData()
 		_mesureTimeout = millis() + CHECK_HT_INTERVAL_MS;
 	}
 }
+
 /**
 * @brief Build publish payload.
 * @param buffer where fill payload.
 * @param command description
 * @param number device number
 * @param state device state
+*
 * @return void
 */
 void buildPayload(char* buffer, const char* command, char separator, byte number, const char* state)
@@ -236,6 +257,13 @@ void buildPayload(char* buffer, const char* command, char separator, byte number
 	buffer[stLen] = '\0';
 }
 
+/**
+* @brief Publish topic.
+* @param topic title.
+* @param payload data to send
+*
+* @return void
+*/
 void Publish(const char* topic, char* payload)
 {
 	Serial.print("Publish topic [");
@@ -243,8 +271,10 @@ void Publish(const char* topic, char* payload)
 	Serial.print("] payload [");
 	Serial.print(_payload);
 	Serial.println("]");
+
 	_mqttClient.publish(topic, (const char*)_payload);
 }
+
 /**
 * @brief Connect to WiFi access point.
 *
@@ -254,11 +284,12 @@ bool ConnectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
 	{
-		Serial.print("Connecting [");
-		Serial.print(SSID);
+		Serial.print("Reconnecting [");
+		Serial.print(WiFi.SSID());
 		Serial.println("]...");
 
-		WiFi.begin(SSID, SSID_PASSWORD);
+		WiFi.begin();
+		//WiFi.begin(SSID, SSID_PASSWORD);
 
 		if (WiFi.waitForConnectResult() != WL_CONNECTED)
 		{

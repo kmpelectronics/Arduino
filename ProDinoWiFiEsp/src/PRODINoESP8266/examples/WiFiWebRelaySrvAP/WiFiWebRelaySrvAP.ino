@@ -23,7 +23,7 @@ ESP8266WebServer _server(HTTP_PORT);
 
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
-const char* APID = "KMP ProDino WiFi-ESP";
+const char* APID = "KMP ProDino WiFi-ESP AP";
 
 /**
  * @brief Execute first after start device. Initialize hardware.
