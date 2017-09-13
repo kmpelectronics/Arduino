@@ -5,32 +5,34 @@
 //    KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
 //    Cloud MQTT example with DHT support. In this example we show how to connect KMP ProDino WiFi-ESP WROOM-02 with some MQTT server and measure humidity and temperature with DHT22 sensor.
-//    The example include add settings with web page. If device can't find WiFi network automatic change to AP. In suppled web page you can set WiFi and MQTT configuration.
+//    In the example you can set settings through web page. How it works: if device can't find WiFi network automatic change to AP. In web page you can set WiFi and MQTT configuration.
 //    If you wish remote management (example from a phone) you can use Amazon cloudmqtt.com service.
-// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebrelayserverap.aspx
-// Version: 1.0.0
-// Date: 26.07.2017
+// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wificlouddhtmqttmng.aspx
+// Prerequisites: you should install libraries described in #include section below.
+// Version: 1.0.1
+// Date: 13.09.2017
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include <FS.h>
-#include <KMPDinoWiFiESP.h>
+#include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
 #include <KMPCommon.h>
 #include <ESP8266WiFi.h>
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <DNSServer.h>            // Local DNS Server used for redirecting all requests to the configuration portal
-#include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
-#include <PubSubClient.h>         // Install with Library Manager. PubSubClient by Nick O'Leary. https://pubsubclient.knolleary.net/
-#include <DHT.h>                  // Install with Library Manager. DHT sensor library by Adafruit. https://github.com/adafruit/DHT-sensor-library
-#include <WiFiManager.h>          // Install with Library Manager. WiFiManager by tzapu. https://github.com/tzapu/WiFiManager
-#include <ArduinoJson.h>          // Install with Library Manager. ArduinoJson by Benoit Blanchon. https://github.com/bblanchon/ArduinoJson
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <PubSubClient.h>         // Install with Library Manager. "PubSubClient by Nick O'Leary" https://pubsubclient.knolleary.net/
+#include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
+#include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
+#include <ArduinoJson.h>          // Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
 
 const uint8_t MQTT_SERVER_LEN = 40;
 const uint8_t MQTT_PORT_LEN = 8;
 const uint8_t MQTT_CLIENT_ID_LEN = 32;
 const uint8_t MQTT_USER_LEN = 16;
 const uint8_t MQTT_PASS_LEN = 16;
+const long CHECK_HT_INTERVAL_MS = 10000;
 
 const char* MQTT_SERVER_KEY = "mqttServer";
 const char* MQTT_PORT_KEY = "mqttPort";
@@ -53,30 +55,24 @@ const char* RELAY = "relay";
 const char* OPTO_INPUT = "optoin";
 const char* SET_COMMAND = "set";
 
+WiFiClient _wifiClient;
+PubSubClient _mqttClient;
 DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
 // Contains last measured humidity and temperature from sensor.
 float _dht[2];
-
-// Check sensor data, interval in milliseconds.
-const long CHECK_HT_INTERVAL_MS = 10000;
 // Store last measure time.
 unsigned long _mesureTimeout;
 
-// Declares a ESP8266WiFi client.
-WiFiClient _wifiClient;
-// Declare a MQTT client.
-//PubSubClient _mqttClient(MQTT_SERVER, MQTT_PORT, _wifiClient);
-PubSubClient _mqttClient;
-
 // There arrays store last states by relay and optical isolated inputs.
 bool _lastRelayStatus[4] = { false };
+bool _relayStatusChanged[4] = { false };
 bool _lastOptoInStatus[4] = { false };
 
 // Buffer by send output state.
 char _payload[16];
 
-//flag for saving data
-bool shouldSaveConfig = false;
+// Flags for saving data
+bool _shouldSaveConfig = false;
 bool _forceSendData = true;
 
 /**
@@ -122,6 +118,13 @@ void setup(void)
 	_mqttClient.setCallback(callback);
 }
 
+/**
+* @brief Build topic from parameters.
+* @param num Numbers of parameters.
+* @param ... values, separated with comma. The values should be from type char*
+*
+* @return combined text
+*/
 String buildTopic(int num, ...)
 {
 	String result = "";
@@ -151,9 +154,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 	printTopicAndPayload("Subscribe", topic, (char*)payload, length);
 
-	size_t mineTopicLen = strlen(MAIN_TOPIC);
+	size_t mainTopicLen = strlen(MAIN_TOPIC);
 	// Topic kmp/prodinowifi - command send all data from device.
-	if (length == mineTopicLen && strncmp(MAIN_TOPIC, topic, mineTopicLen) == 0)
+	if (strlen(topic) == mainTopicLen &&  strcmp(MAIN_TOPIC, topic) == 0)
 	{
 		_forceSendData = true;
 		return;
@@ -170,10 +173,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	if (topicName.startsWith(topicStart) && topicName.endsWith(topicEnd))
 	{
 		int relayNumber = CharToInt(topic[topicStart.length()]);
-		if (length = 1)
+		if (length == 1)
 		{
 			int relayState = CharToInt(payload[0]);
 			KMPDinoWiFiESP.SetRelayState(relayNumber, relayState == 1);
+			_relayStatusChanged[relayNumber] = true;
 		}
 	}
 }
@@ -219,10 +223,11 @@ void publishRelayOptoData(bool isForceSend)
 	for (byte i = 0; i < RELAY_COUNT; i++)
 	{
 		bool rState = KMPDinoWiFiESP.GetRelayState(i);
-		if (_lastRelayStatus[i] != rState || isForceSend)
+		if (_lastRelayStatus[i] != rState || _relayStatusChanged[i] || isForceSend)
 		{
 			_lastRelayStatus[i] = rState;
-			
+			_relayStatusChanged[i] = false;
+
 			state[0] = IntToChar(i);
 			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
 			
@@ -272,7 +277,7 @@ void publishDHTSensorData(bool isForceSend)
 
 		if (_dht[1] != temperature || isForceSend)
 		{
-			_dht[2] = temperature;
+			_dht[1] = temperature;
 			FloatToChars(temperature, 1, _payload);
 			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); // kmp/prodinowifi/temperature
 			publish(topic.c_str(), _payload);
@@ -387,11 +392,11 @@ bool connectMqtt()
 void saveConfigCallback()
 {
 	Serial.println("Should save config");
-	shouldSaveConfig = true;
+	_shouldSaveConfig = true;
 }
 
 /**
-* @brief Collect information for connect WiFi and MQTT server. After successful connected and save them.
+* @brief Setting information for connect WiFi and MQTT server. After successful connected this method save them.
 * @param wifiManager.
 *
 * @return bool if successful connected - true else false.
@@ -471,7 +476,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 	//if you get here you have connected to the WiFi
 	Serial.println("Connected.");
 
-	if (shouldSaveConfig)
+	if (_shouldSaveConfig)
 	{
 		Serial.println("Saving config");
 
