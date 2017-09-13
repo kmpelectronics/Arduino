@@ -1,26 +1,30 @@
-// WiFiAutoCloudDHTMqtt.ino
+// WiFiCloudDHTMqttMng.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: http://kmpelectronics.eu/
 // Supported boards:
 //    KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
-//    Cloud MQTT example with DHT support. In this example we show how to connect KMP ProDino WiFi-ESP WROOM-02 with Amazon cloudmqtt.com service and measure humidity and temperature with DHT22 sensor.
+//    Cloud MQTT example with DHT support. In this example we show how to connect KMP ProDino WiFi-ESP WROOM-02 with some MQTT server and measure humidity and temperature with DHT22 sensor.
+//    The example include add settings with web page. If device can't find WiFi network automatic change to AP. In suppled web page you can set WiFi and MQTT configuration.
+//    If you wish remote management (example from a phone) you can use Amazon cloudmqtt.com service.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebrelayserverap.aspx
 // Version: 1.0.0
 // Date: 26.07.2017
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
-#include <FS.h> 
+#include <FS.h>
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
-#include <DHT.h>
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h>
+#include <stdio.h>
+#include <stdarg.h>
 
-#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
-#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
-#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
+#include <DNSServer.h>            // Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
+#include <PubSubClient.h>         // Install with Library Manager. PubSubClient by Nick O'Leary. https://pubsubclient.knolleary.net/
+#include <DHT.h>                  // Install with Library Manager. DHT sensor library by Adafruit. https://github.com/adafruit/DHT-sensor-library
+#include <WiFiManager.h>          // Install with Library Manager. WiFiManager by tzapu. https://github.com/tzapu/WiFiManager
+#include <ArduinoJson.h>          // Install with Library Manager. ArduinoJson by Benoit Blanchon. https://github.com/bblanchon/ArduinoJson
 
 const uint8_t MQTT_SERVER_LEN = 40;
 const uint8_t MQTT_PORT_LEN = 8;
@@ -41,19 +45,17 @@ char _mqttClientId[MQTT_CLIENT_ID_LEN] = "ESP8266Client";
 char _mqttUser[MQTT_USER_LEN];
 char _mqttPass[MQTT_PASS_LEN];
 
-const char TOPIC_SEPARATOR = '/';
+const char* TOPIC_SEPARATOR = "/";
 const char* MAIN_TOPIC = "kmp/prodinowifi";
 const char* HUMIDITY_SENSOR = "humidity";
 const char* TEMPERATURE_SENSOR = "temperature";
-const char* RELAY_OUTPUT = "relay";
+const char* RELAY = "relay";
 const char* OPTO_INPUT = "optoin";
 const char* SET_COMMAND = "set";
 
 DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
-// Contains last measured humidity from sensor.
-float _humidity;
-// Contains last measured temperature from sensor.
-float _temperature;
+// Contains last measured humidity and temperature from sensor.
+float _dht[2];
 
 // Check sensor data, interval in milliseconds.
 const long CHECK_HT_INTERVAL_MS = 10000;
@@ -72,11 +74,10 @@ bool _lastOptoInStatus[4] = { false };
 
 // Buffer by send output state.
 char _payload[16];
-bool _sendAllData;
-bool _sendRelayData;
 
 //flag for saving data
 bool shouldSaveConfig = false;
+bool _forceSendData = true;
 
 /**
 * @brief Execute first after start device. Initialize hardware.
@@ -94,7 +95,7 @@ void setup(void)
 	Serial.println("KMP Mqtt cloud client example.\r\n");
 
 	//WiFiManager
-	//Local initialization. Once its business is done, there is no need to keep it around
+	//Local initialization. Once it's business is done, there is no need to keep it around.
 	WiFiManager wifiManager;
 
 	// Is OptoIn 4 is On the board is resetting WiFi configuration.
@@ -109,7 +110,7 @@ void setup(void)
 	//set config save notify callback
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-	if (!AddParametersAndAutoConnect(&wifiManager))
+	if (!mangeConnectParamers(&wifiManager))
 	{
 		return;
 	}
@@ -119,73 +120,62 @@ void setup(void)
 	uint16_t port = atoi(_mqttPort);
 	_mqttClient.setServer(_mqttServer, port);
 	_mqttClient.setCallback(callback);
+}
 
-	_sendAllData = true;
+String buildTopic(int num, ...)
+{
+	String result = "";
+	va_list valist;
+	int i;
+
+	/* initialize valist for num number of arguments */
+	va_start(valist, num);
+
+	/* access all the arguments assigned to valist */
+	for (i = 0; i < num; i++) {
+		result += va_arg(valist, char*);
+	}
+
+	/* clean memory reserved for valist */
+	va_end(valist);
+
+	return result;
 }
 
 /**
-* @brief Callback method. It is fire when has information in subscribed topic.
+* @brief Callback method. It is fire when has information in subscribed topics.
 *
 * @return void
 */
 void callback(char* topic, byte* payload, unsigned int length) {
 
-	Serial.print("Subscribed topic [");
-	Serial.print(topic);
-	Serial.print("]");
-	
-	Serial.print(" payload [");
+	printTopicAndPayload("Subscribe", topic, (char*)payload, length);
 
-	for (uint i = 0; i < length; i++)
+	size_t mineTopicLen = strlen(MAIN_TOPIC);
+	// Topic kmp/prodinowifi - command send all data from device.
+	if (length == mineTopicLen && strncmp(MAIN_TOPIC, topic, mineTopicLen) == 0)
 	{
-		Serial.print((char)payload[i]);
-	}
-	Serial.println("]");
-
-	// kmp/prodinowifi - command send all data from device.
-	if (strncmp(MAIN_TOPIC, topic, strlen(MAIN_TOPIC)) == 0)
-	{
-		// TODO: Print all data.
+		_forceSendData = true;
 		return;
 	}
-	
-	String topicName = String(topic);
-	String topicStart = String(MAIN_TOPIC) + TOPIC_SEPARATOR + RELAY_OUTPUT + TOPIC_SEPARATOR;
-	String topicEnd = String(TOPIC_SEPARATOR) + SET_COMMAND;
 
-	// kmp/prodinowifi/relay/+/set - command send relay status.
+	String topicName = String(topic);
+
+	String topicStart = buildTopic(4, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR);
+	String topicEnd = buildTopic(2, TOPIC_SEPARATOR, SET_COMMAND);
+
+	// Set new realy status.
+	// Topic kmp/prodinowifi/relay/+/set - command which send relay status.
+	// + is relay number (0..3), payload is (0 - Off, 1 - On).
 	if (topicName.startsWith(topicStart) && topicName.endsWith(topicEnd))
 	{
-		// TODO: Set relay status.
-		//if (strncmp(CMD_REL, (const char*)payload, cmdRelLen) == 0 && length >= cmdRelLen + 4)
-		//{
-		//	KMPDinoWiFiESP.SetRelayState(CharToInt(payload[4]), CharToInt(payload[6]) == 1);
-		//	_sendRelayData = true;
-		//}
+		int relayNumber = CharToInt(topic[topicStart.length()]);
+		if (length = 1)
+		{
+			int relayState = CharToInt(payload[0]);
+			KMPDinoWiFiESP.SetRelayState(relayNumber, relayState == 1);
+		}
 	}
-
-	// Command send all data.
-	if ( ((const char*)payload, CMD_ALL, strlen(CMD_ALL)) == 0)
-	{
-		_sendAllData = true;
-		return;
-	}
-
-	// Relay command.
-	// Command structure: [command (rel):relay number (0..3):relay state (0 - Off, 1 - On)]. Example: rel:0:0 
-	size_t cmdRelLen = strlen(CMD_REL);
-
-	if (strncmp(CMD_REL, (const char*)payload, cmdRelLen) == 0 && length >= cmdRelLen + 4)
-	{
-		KMPDinoWiFiESP.SetRelayState(CharToInt(payload[4]), CharToInt(payload[6]) == 1);
-		_sendRelayData = true;
-	}
-}
-
-String createTopic(params char*[] prm)
-{
-
-	return NULL;
 }
 
 /**
@@ -196,27 +186,32 @@ String createTopic(params char*[] prm)
 void loop(void)
 {
 	// By the normal device work need connected with WiFi and MQTT server.
-	if (!ConnectWiFi() || !ConnectMqtt())
+	if (!connectWiFi() || !connectMqtt())
 	{
 		return;
 	}
 
 	_mqttClient.loop();
+	
+	// Publish information into MQTT.
+	publishRelayOptoData(_forceSendData);
+	publishDHTSensorData(_forceSendData);
+	
+	_forceSendData = false;
+}
 
-	// Publish information in MQTT.
-	PublishInformation();
-	GetDHTSensorData();
-
-	_sendAllData = false;
-	_sendRelayData = false;
+char getState(bool state)
+{
+	return state ? '1' : '0';
 }
 
 /**
 * @brief Publish information in the MQTT server.
-*
+* @param isForceSend is set to true send all information from device, if false send only changed information.
+* 
 * @return void
 */
-void PublishInformation()
+void publishRelayOptoData(bool isForceSend)
 {
 	char state[2];
 	state[1] = '\0';
@@ -224,81 +219,68 @@ void PublishInformation()
 	for (byte i = 0; i < RELAY_COUNT; i++)
 	{
 		bool rState = KMPDinoWiFiESP.GetRelayState(i);
-		if (_lastRelayStatus[i] != rState || _sendAllData || _sendRelayData)
+		if (_lastRelayStatus[i] != rState || isForceSend)
 		{
 			_lastRelayStatus[i] = rState;
-			state[0] = rState ? '1' : '0';
-			buildPayload(_payload, CMD_REL, CMD_SEP, i, state);
-			Publish(MAIN_TOPIC, _payload);
+			
+			state[0] = IntToChar(i);
+			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
+			
+			state[0] = getState(rState);
+			publish(topic.c_str(), state);
 		}
 	}
 
 	for (byte i = 0; i < OPTOIN_COUNT; i++)
 	{
 		bool oiState = KMPDinoWiFiESP.GetOptoInState(i);
-		if (_lastOptoInStatus[i] != oiState || _sendAllData)
+		if (_lastOptoInStatus[i] != oiState || isForceSend)
 		{
 			_lastOptoInStatus[i] = oiState;
-			state[0] = oiState ? '1' : '0';
-			buildPayload(_payload, CMD_OPTOIN, CMD_SEP, i, state);
 
-			Publish(MAIN_TOPIC, _payload);
+			state[0] = IntToChar(i);
+			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, OPTO_INPUT, TOPIC_SEPARATOR, state); // kmp/prodinowifi/optoin/0
+
+			state[0] = getState(oiState);
+			publish(topic.c_str(), state);
 		}
 	}
 }
 
 /**
 * @brief Read data from sensors a specified time.
+* @param isForceSend is set to true send all information from device, if false send only changed information.
 *
 * @return void
 */
-void GetDHTSensorData()
+void publishDHTSensorData(bool isForceSend)
 {
-	if (millis() > _mesureTimeout || _sendAllData)
+	// Publish humidity or temperature if is isForceSend or time to send ocurred and value is changed.
+	if (millis() > _mesureTimeout || isForceSend)
 	{
 		_dhtSensor.read(true);
 		float humidity = _dhtSensor.readHumidity();
 		float temperature = _dhtSensor.readTemperature();
 
-		if (_humidity != humidity || _sendAllData)
+		if (_dht[0]	!= humidity || isForceSend)
 		{
+			_dht[0] = humidity;
 			FloatToChars(humidity, 1, _payload);
-			_humidity = humidity;
-			Publish(TOPIC_INFO_DHT_H, _payload);
+			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, HUMIDITY_SENSOR); // kmp/prodinowifi/humidity
+			publish(topic.c_str(), _payload);
 		}
 
-		if (_temperature != temperature || _sendAllData)
+		if (_dht[1] != temperature || isForceSend)
 		{
+			_dht[2] = temperature;
 			FloatToChars(temperature, 1, _payload);
-			_temperature = temperature;
-			Publish(DHT_SENSOR, _payload);
+			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); // kmp/prodinowifi/temperature
+			publish(topic.c_str(), _payload);
 		}
 
 		// Set next time to read data.
 		_mesureTimeout = millis() + CHECK_HT_INTERVAL_MS;
 	}
-}
-
-/**
-* @brief Build publish payload.
-* @param buffer where fill payload.
-* @param command description
-* @param number device number
-* @param state device state
-*
-* @return void
-*/
-void buildPayload(char* buffer, const char* command, char separator, byte number, const char* state)
-{
-	int cmdLen = strlen(command);
-	memcpy(buffer, command, cmdLen);
-	buffer[cmdLen++] = separator;
-	buffer[cmdLen++] = IntToChar(number);
-	buffer[cmdLen++] = separator;
-	buffer += cmdLen;
-	int stLen = strlen(state);
-	memcpy(buffer, state, stLen);
-	buffer[stLen] = '\0';
 }
 
 /**
@@ -308,15 +290,32 @@ void buildPayload(char* buffer, const char* command, char separator, byte number
 *
 * @return void
 */
-void Publish(const char* topic, char* payload)
+void publish(const char* topic, char* payload)
 {
-	Serial.print("Publish topic [");
+	printTopicAndPayload("Publish", topic, payload, strlen(payload));
+	
+	_mqttClient.publish(topic, (const char*)payload);
+}
+
+/**
+* @brief Print debug information about topic and payload.
+* @operationName operation which use this data.
+* @param topic title.
+* @param payload data
+*
+* @return void
+*/
+void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length)
+{
+	Serial.print(operationName);
+	Serial.print(" topic [");
 	Serial.print(topic);
 	Serial.print("] payload [");
-	Serial.print(_payload);
+	for (uint i = 0; i < length; i++)
+	{
+		Serial.print((char)payload[i]);
+	}
 	Serial.println("]");
-
-	_mqttClient.publish(topic, (const char*)_payload);
 }
 
 /**
@@ -324,7 +323,7 @@ void Publish(const char* topic, char* payload)
 *
 * @return bool true - success.
 */
-bool ConnectWiFi()
+bool connectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
 	{
@@ -333,7 +332,6 @@ bool ConnectWiFi()
 		Serial.println("]...");
 
 		WiFi.begin();
-		//WiFi.begin(SSID, SSID_PASSWORD);
 
 		if (WiFi.waitForConnectResult() != WL_CONNECTED)
 		{
@@ -352,7 +350,7 @@ bool ConnectWiFi()
 *
 * @return bool true - success.
 */
-bool ConnectMqtt()
+bool connectMqtt()
 {
 	if (!_mqttClient.connected())
 	{
@@ -361,7 +359,12 @@ bool ConnectMqtt()
 		if (_mqttClient.connect(_mqttClientId, _mqttUser, _mqttPass))
 		{
 			Serial.println("Connected.");
-			_mqttClient.subscribe(TOPIC_COMMAND);
+			// Subscribe for topics:
+			//  kmp/prodinowifi
+			//  kmp/prodinowifi/relay/+/set
+			_mqttClient.subscribe(MAIN_TOPIC);
+			String topic = buildTopic(7, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND);
+			_mqttClient.subscribe(topic.c_str());
 		}
 		else
 		{
@@ -388,19 +391,19 @@ void saveConfigCallback()
 }
 
 /**
-* @brief Collect information for connect WiFi and MQTT server. After successful connected and !!!!!
+* @brief Collect information for connect WiFi and MQTT server. After successful connected and save them.
 * @param wifiManager.
 *
 * @return bool if successful connected - true else false.
 */
-bool AddParametersAndAutoConnect(WiFiManager* wifiManager)
+bool mangeConnectParamers(WiFiManager* wifiManager)
 {
 	//read configuration from FS json
-	Serial.println("mounting FS...");
+	Serial.println("Mounting FS...");
 
 	if (!SPIFFS.begin())
 	{
-		Serial.println("failed to mount FS");
+		Serial.println("Failed to mount FS");
 	}
 	else
 	{
@@ -464,7 +467,7 @@ bool AddParametersAndAutoConnect(WiFiManager* wifiManager)
 		Serial.println("Doesn't connect");
 		return false;
 	}
-		
+
 	//if you get here you have connected to the WiFi
 	Serial.println("Connected.");
 
