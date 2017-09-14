@@ -105,9 +105,9 @@ bool atoip(char *data, uint8_t* result);
 bool atoUint8(char *data, uint8_t& result);
 
 /**
- * \brief Check if "text" start with "findTxt".
+ * \brief Check if "text" start with prefix.
  * 
- * \param text In which will search "findTxt".
+ * \param text In which will search.
  * \param findTxt Text to find.
  * \param caseSensitive Check case sensitive if true or case insensitive chars. Default false.
  * 
@@ -115,7 +115,21 @@ bool atoUint8(char *data, uint8_t& result);
  *                  - true - "text" start with "findTxt";
  *                  - false - "text" not start with "findTxt".
  */
-bool startsWith(const char* text, const char* findTxt, bool caseSensitive = false);
+bool startsWith(const char* str, const char* prefix/*, bool caseSensitive = false*/);
+
+bool endsWith(const char* str, const char* suffix);
+
+bool startAndEndWith(const char* str, const char* prefix, const char* suffix);
+
+/**
+* @brief Concatenate parameters in buffer.
+* @param buffer A buffer in which concatenates string parameter.
+* @param num Numbers of parameters.
+* @param ... parameters separated with comma. The values should be of type char*. Example: "house", "/", "bedroom"
+*
+* @return void
+*/
+void strConcatenate(char* buffer, int num, ...);
 
 /**
  * \brief Convert ip address (array of bytes) to string.
