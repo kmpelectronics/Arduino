@@ -69,6 +69,7 @@ bool _lastStatus[3][4] = { false };
 
 // Text buffers for topic and payload.
 char _topic[128];
+char _topicSecond[128];
 char _payload[16];
 
 // Flags for saving data
@@ -131,59 +132,12 @@ void loop(void)
 	}
 
 	_mqttClient.loop();
-	
+
 	// Publish information into MQTT.
 	publishRelayOptoData(_forceSendData);
 	publishDHTSensorData(_forceSendData);
-	
+
 	_forceSendData = false;
-}
-
-/**
-* @brief Build topic from parameters.
-* @param num Numbers of parameters.
-* @param ... values, separated with comma. The values should be of type char*
-*
-* @return combined text
-*/
-String buildTopic(int num, ...)
-{
-	String result = "";
-	va_list valist;
-	int i;
-
-	/* initialize valist for num number of arguments */
-	va_start(valist, num);
-
-	/* access all the arguments assigned to valist */
-	for (i = 0; i < num; i++) {
-		result += va_arg(valist, char*);
-	}
-
-	/* clean memory reserved for valist */
-	va_end(valist);
-
-	return result;
-}
-
-/**
-* @brief Build topic from parameters.
-* @param buffer In it combine parameters.
-* @param params Parameters list.
-* @param count Parameters count.
-*
-* @return void
-*/
-void buildTopicNew(char* buffer, const char* params[], const uint8_t count)
-{
-	for (uint8_t i = 0; i < count; i++)
-	{
-		int paramLen = strlen(params[i]);
-		memcpy(buffer, params[i], paramLen);
-		buffer += paramLen;
-	}
-	buffer++;
-	*buffer = '\0';
 }
 
 /**
@@ -203,17 +157,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
 		return;
 	}
 
-	String topicName = String(topic);
-
-	String topicStart = buildTopic(4, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR);
-	String topicEnd = buildTopic(2, TOPIC_SEPARATOR, SET_COMMAND);
+	strConcatenate(_topic, 4, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR);
+	strConcatenate(_topicSecond, 2, TOPIC_SEPARATOR, SET_COMMAND);
 
 	// Set new realy status.
 	// Topic kmp/prodinowifi/relay/+/set - command which send relay status.
 	// + is relay number (0..3), payload is (0 - Off, 1 - On).
-	if (topicName.startsWith(topicStart) && topicName.endsWith(topicEnd))
+	if (startAndEndWith(topic, _topic, _topicSecond))
 	{
-		int relayNumber = CharToInt(topic[topicStart.length()]);
+		int relayNumber = CharToInt(topic[strlen(_topic)]);
 		if (length == 1)
 		{
 			int relayState = CharToInt(payload[0]);
@@ -231,7 +183,7 @@ char getState(bool state)
 /**
 * @brief Publish information in the MQTT server.
 * @param isForceSend is set to true send all information from device, if false send only changed information.
-* 
+*
 * @return void
 */
 void publishRelayOptoData(bool isForceSend)
@@ -248,10 +200,10 @@ void publishRelayOptoData(bool isForceSend)
 			_lastStatus[1][i] = false;
 
 			state[0] = IntToChar(i);
-			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
+			strConcatenate(_topic, 5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
 			
 			state[0] = getState(rState);
-			publish(topic.c_str(), state);
+			publish(_topic, state);
 		}
 	}
 
@@ -263,10 +215,10 @@ void publishRelayOptoData(bool isForceSend)
 			_lastStatus[2][i] = oiState;
 
 			state[0] = IntToChar(i);
-			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, OPTO_INPUT, TOPIC_SEPARATOR, state); // kmp/prodinowifi/optoin/0
+			strConcatenate(_topic, 5, MAIN_TOPIC, TOPIC_SEPARATOR, OPTO_INPUT, TOPIC_SEPARATOR, state); // kmp/prodinowifi/optoin/0
 
 			state[0] = getState(oiState);
-			publish(topic.c_str(), state);
+			publish(_topic, state);
 		}
 	}
 }
@@ -286,20 +238,20 @@ void publishDHTSensorData(bool isForceSend)
 		float humidity = _dhtSensor.readHumidity();
 		float temperature = _dhtSensor.readTemperature();
 
-		if (_dht[0]	!= humidity || isForceSend)
+		if (_dht[0] != humidity || isForceSend)
 		{
 			_dht[0] = humidity;
 			FloatToChars(humidity, 1, _payload);
-			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, HUMIDITY_SENSOR); // kmp/prodinowifi/humidity
-			publish(topic.c_str(), _payload);
+			strConcatenate(_topic, 3, MAIN_TOPIC, TOPIC_SEPARATOR, HUMIDITY_SENSOR); // kmp/prodinowifi/humidity
+			publish(_topic, _payload);
 		}
 
 		if (_dht[1] != temperature || isForceSend)
 		{
 			_dht[1] = temperature;
 			FloatToChars(temperature, 1, _payload);
-			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); // kmp/prodinowifi/temperature
-			publish(topic.c_str(), _payload);
+			strConcatenate(_topic, 3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); // kmp/prodinowifi/temperature
+			publish(_topic, _payload);
 		}
 
 		// Set next time to read data.
@@ -317,7 +269,7 @@ void publishDHTSensorData(bool isForceSend)
 void publish(const char* topic, char* payload)
 {
 	printTopicAndPayload("Publish", topic, payload, strlen(payload));
-	
+
 	_mqttClient.publish(topic, (const char*)payload);
 }
 
@@ -388,14 +340,9 @@ bool connectMqtt()
 			//  kmp/prodinowifi
 			_mqttClient.subscribe(MAIN_TOPIC);
 			//  kmp/prodinowifi/relay/+/set
-			String topic = buildTopic(7, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND);
-			// TODO: New implementation, should be test it.
-			const char * params[] = { MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND };
-			buildTopicNew(_topic, params, 7);
-			Serial.print("buildTopicNew: ");
-			Serial.println(_topic);
+			strConcatenate(_topic, 7, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND);
 
-			_mqttClient.subscribe(topic.c_str());
+			_mqttClient.subscribe(_topic);
 		}
 		else
 		{
@@ -455,7 +402,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 				configFile.readBytes(buf.get(), size);
 				DynamicJsonBuffer jsonBuffer;
 				JsonObject& json = jsonBuffer.parseObject(buf.get());
-				//json.printTo(Serial);
+				json.printTo(Serial);
 				if (json.success())
 				{
 					Serial.println("\nJson is parsed");
