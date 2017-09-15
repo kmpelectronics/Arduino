@@ -39,11 +39,9 @@ PubSubClient _mqttClient;
 DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
 // Contains last measured humidity and temperature from the sensor.
 float _dht[2];
-// Store last measure time.
-unsigned long _mesureTimeout;
 
 // Text buffers for topic and payload.
-char _topic[128];
+char _strBuffer[128];
 char _payload[16];
 
 // Flags for saving data
@@ -51,9 +49,16 @@ bool _shouldSaveConfig = false;
 bool _forceSendAllData = true;
 
 Mode _mode = Cold;
-bool _isOn = true;
+DeviceState _deviceState = Off;
 
 float _desiredTemperature = 22.0;
+float _currentTemperature;
+
+float _tempCollection[TEMPERATURE_ARRAY_LEN] = { 22.0 };
+uint8_t _tempCollectPos = 0;
+// Store last measure time.
+unsigned long _mesureTempTimeout;
+uint8_t _funDegree = 0;
 
 /**
 * @brief Execute first after start the device. Initialize hardware.
@@ -112,8 +117,12 @@ void loop(void)
 
 	_mqttClient.loop();
 	
+	collectTemperature();
+	processTemperature();
+	funControl();
+
 	// Publish information into MQTT.
-	publishRelayOptoData(_forceSendAllData);
+	publishData(_forceSendAllData);
 	publishDHTSensorData(_forceSendAllData);
 	
 	_forceSendAllData = false;
@@ -146,15 +155,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	removeStart(topic, baseTopicLen + 1);
 
 	// All other topics finished with /set
-	strConcatenate(_topic, 2, TOPIC_SEPARATOR, SET_COMMAND);
+	strConcatenate(_strBuffer, 2, TOPIC_SEPARATOR, SET_COMMAND);
 
-	if (!endsWith(topic, _topic))
+	if (!endsWith(topic, _strBuffer))
 	{
 		return;
 	}
 
 	// Remove /set
-	removeEnd(topic, strlen(_topic));
+	removeEnd(topic, strlen(_strBuffer));
 
 	// Processing topic basetopic/mode/set: heat/cold
 	if (isEqual(topic, MODE_COMMAND))
@@ -179,20 +188,35 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	// Processing topic basetopic/temperature/set: 22.5
 	if (isEqual(topic, TEMPERATURE_COMMAND))
 	{
-		memcpy(_topic, payload, length);
-		_topic[length] = CH_NONE;
-		_desiredTemperature = atoff(_topic);
+		memcpy(_strBuffer, payload, length);
+		_strBuffer[length] = CH_NONE;
+		_desiredTemperature = atoff(_strBuffer);
 		_forceSendAllData = true;
 		return;
 	}
 
 	// Processing topic basetopic/state/set: on, off
-	// TODO: Start from here.
-}
+	if (isEqual(topic, STATE_COMMAND))
+	{
+		memcpy(_strBuffer, payload, length);
+		_strBuffer[length] = CH_NONE;
 
-char getState(bool state)
-{
-	return state ? '1' : '0';
+		if (isEqual(_strBuffer, ON_STATE))
+		{
+			_deviceState = On;
+			_forceSendAllData = true;
+			SaveConfiguration();
+			return;
+		}
+		
+		if (isEqual(_strBuffer, OFF_STATE))
+		{
+			_deviceState = Off;
+			_forceSendAllData = true;
+			SaveConfiguration();
+			return;
+		}
+	}
 }
 
 /**
@@ -201,42 +225,113 @@ char getState(bool state)
 * 
 * @return void
 */
-void publishRelayOptoData(bool isForceSend)
+//void publishData(bool forceSendAllData)
+//{
+//	char state[2];
+//	state[1] = '\0';
+//	// Get current Opto input and relay statuses.
+//	for (byte i = 0; i < RELAY_COUNT; i++)
+//	{
+//		bool rState = KMPDinoWiFiESP.GetRelayState(i);
+//		if (_lastStatus[0][i] != rState || _lastStatus[1][i] || isForceSend)
+//		{
+//			_lastStatus[0][i] = rState;
+//			_lastStatus[1][i] = false;
+//
+//			state[0] = IntToChar(i);
+//			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
+//			
+//			state[0] = getState(rState);
+//			publish(topic.c_str(), state);
+//		}
+//	}
+//
+//	for (byte i = 0; i < OPTOIN_COUNT; i++)
+//	{
+//		bool oiState = KMPDinoWiFiESP.GetOptoInState(i);
+//		if (_lastStatus[2][i] != oiState || isForceSend)
+//		{
+//			_lastStatus[2][i] = oiState;
+//
+//			state[0] = IntToChar(i);
+//			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, OPTO_INPUT, TOPIC_SEPARATOR, state); // kmp/prodinowifi/optoin/0
+//
+//			state[0] = getState(oiState);
+//			publish(topic.c_str(), state);
+//		}
+//	}
+//}
+
+void collectTemperature()
 {
-	char state[2];
-	state[1] = '\0';
-	// Get current Opto input and relay statuses.
-	for (byte i = 0; i < RELAY_COUNT; i++)
+	if (millis() > _mesureTempTimeout)
 	{
-		bool rState = KMPDinoWiFiESP.GetRelayState(i);
-		if (_lastStatus[0][i] != rState || _lastStatus[1][i] || isForceSend)
+		if (_tempCollectPos == TEMPERATURE_ARRAY_LEN)
 		{
-			_lastStatus[0][i] = rState;
-			_lastStatus[1][i] = false;
-
-			state[0] = IntToChar(i);
-			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
-			
-			state[0] = getState(rState);
-			publish(topic.c_str(), state);
+			_tempCollectPos = 0;
 		}
-	}
 
-	for (byte i = 0; i < OPTOIN_COUNT; i++)
-	{
-		bool oiState = KMPDinoWiFiESP.GetOptoInState(i);
-		if (_lastStatus[2][i] != oiState || isForceSend)
-		{
-			_lastStatus[2][i] = oiState;
+		_tempCollection[_tempCollectPos++] = _dhtSensor.readTemperature();
 
-			state[0] = IntToChar(i);
-			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, OPTO_INPUT, TOPIC_SEPARATOR, state); // kmp/prodinowifi/optoin/0
-
-			state[0] = getState(oiState);
-			publish(topic.c_str(), state);
-		}
+		// Set next time to read data.
+		_mesureTempTimeout = millis() + CHECK_HT_INTERVAL_MS;
 	}
 }
+
+void processTemperature()
+{
+	// Get average value.
+	double temp;
+	for (uint8_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
+	{
+		temp += _tempCollection[i];
+	}
+
+	temp /= TEMPERATURE_ARRAY_LEN;
+
+	if (_currentTemperature != temp)
+	{
+		_currentTemperature = temp;
+		publishData(false, true);
+	}
+}
+
+void funControl()
+{
+	if (_deviceState == Off)
+	{
+		if (_funDegree != 0)
+		{
+			setFunDegree(0);
+		}
+
+		return;
+	}
+
+	float diffTemp = _mode == Cold ? _currentTemperature - _desiredTemperature /* Cold */ : _desiredTemperature - _currentTemperature /* Heat */;
+
+	if (diffTemp <= 0)
+	{
+		// TODO: Start from here.
+	}
+}
+
+void setFunDegree(uint degree)
+{
+	if (degree != _funDegree)
+	{
+		_funDegree == degree;
+		publishData(true);
+	}
+	
+	// TODO: Switch relays.
+}
+
+void publishData(bool funDegree = false, bool currentTemperature = false, bool desiredTemperature = false, bool deviceState = false, bool mode = false)
+{
+
+}
+
 
 /**
 * @brief Read data from a sensor for humidity and temperature.
@@ -358,9 +453,9 @@ bool connectMqtt()
 			String topic = buildTopic(7, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND);
 			// TODO: New implementation, should be test it.
 			const char * params[] = { MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND };
-			buildTopicNew(_topic, params, 7);
+			buildTopicNew(_strBuffer, params, 7);
 			Serial.print("buildTopicNew: ");
-			Serial.println(_topic);
+			Serial.println(_strBuffer);
 
 			_mqttClient.subscribe(topic.c_str());
 		}
@@ -480,7 +575,7 @@ void ReadConfiguration()
 					strcpy(_mqttUser, json[MQTT_USER_KEY]);
 					strcpy(_mqttPass, json[MQTT_PASS_KEY]);
 					_mode = (Mode)atoi(json[MODE_KEY]);
-					_isOn = atoi(json[MODE_KEY]) == 1 ? true : false;
+					_deviceState = atoi(json[STATE_COMMAND]) == 1 ? On : Off;
 				}
 				else
 				{
@@ -504,7 +599,7 @@ void SaveConfiguration()
 	json[MQTT_USER_KEY] = _mqttUser;
 	json[MQTT_PASS_KEY] = _mqttPass;
 	json[MODE_KEY] = (int)_mode;
-	json[STATE] = _isOn ? 1 : 0;
+	json[STATE_COMMAND] = _deviceState == On ? 1 : 0;
 
 	File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
 	if (!configFile) {
