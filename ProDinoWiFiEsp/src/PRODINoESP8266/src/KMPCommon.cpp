@@ -146,6 +146,41 @@ void strConcatenate(char* buffer, int num, ...)
 	va_end(valist);
 }
 
+void removeSubstring(char *str, const char *toRemove)
+{
+	while (str = strstr(str, toRemove))
+	{
+		memmove(str, str + strlen(toRemove), 1 + strlen(str + strlen(toRemove)));
+	}
+}
+
+void removeStart(char *str, size_t n)
+{
+	size_t len = strlen(str);
+	if (n > len)
+	{
+		return;
+	}
+
+	memmove(str, str + n, len - n + 1);
+}
+
+void removeEnd(char *str, size_t n)
+{
+	size_t len = strlen(str);
+	if (n > len)
+	{
+		return;
+	}
+
+	str[len - n] = '\0';
+	memmove(str, str + n, len - n + 1);
+}
+
+bool isEqual(const char *strFirst, const char *strSecond)
+{
+	return strcmp(strFirst, strSecond) == 0;
+}
 
 void iptoa(uint8_t * ip, char * result)
 {

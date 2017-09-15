@@ -121,6 +121,14 @@ bool endsWith(const char* str, const char* suffix);
 
 bool startAndEndWith(const char* str, const char* prefix, const char* suffix);
 
+void removeSubstring(char *str, const char *toRemove);
+
+void removeStart(char *str, size_t n);
+
+void removeEnd(char *str, size_t n);
+
+bool isEqual(const char *strFirst, const char *strSecond);
+
 /**
 * @brief Concatenate parameters in buffer.
 * @param buffer A buffer in which concatenates string parameter.

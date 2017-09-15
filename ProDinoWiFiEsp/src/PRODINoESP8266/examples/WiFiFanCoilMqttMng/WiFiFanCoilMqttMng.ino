@@ -21,7 +21,7 @@
 
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
-#include "WiFiFanCoilMqttMngParams.h"
+#include "WiFiFanCoilMqttMngHelper.h"
 #include <PubSubClient.h>         // Install with Library Manager. "PubSubClient by Nick O'Leary" https://pubsubclient.knolleary.net/
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
@@ -51,6 +51,9 @@ bool _shouldSaveConfig = false;
 bool _forceSendAllData = true;
 
 Mode _mode = Cold;
+bool _isOn = true;
+
+float _desiredTemperature = 22.0;
 
 /**
 * @brief Execute first after start the device. Initialize hardware.
@@ -117,53 +120,6 @@ void loop(void)
 }
 
 /**
-* @brief Build topic from parameters.
-* @param num Numbers of parameters.
-* @param ... values, separated with comma. The values should be of type char*
-*
-* @return combined text
-*/
-String buildTopic(int num, ...)
-{
-	String result = "";
-	va_list valist;
-	int i;
-
-	/* initialize valist for num number of arguments */
-	va_start(valist, num);
-
-	/* access all the arguments assigned to valist */
-	for (i = 0; i < num; i++) {
-		result += va_arg(valist, char*);
-	}
-
-	/* clean memory reserved for valist */
-	va_end(valist);
-
-	return result;
-}
-
-/**
-* @brief Build topic from parameters.
-* @param buffer In it combine parameters.
-* @param params Parameters list.
-* @param count Parameters count.
-*
-* @return void
-*/
-void buildTopic(char* buffer, const char* fragments[], const uint8_t count)
-{
-	for (uint8_t i = 0; i < count; i++)
-	{
-		int paramLen = strlen(fragments[i]);
-		memcpy(buffer, fragments[i], paramLen);
-		buffer += paramLen;
-	}
-	buffer++;
-	*buffer = '\0';
-}
-
-/**
 * @brief Callback method. It is fire when has information in subscribed topics.
 *
 * @return void
@@ -172,65 +128,66 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 	printTopicAndPayload("Subscribe", topic, (char*)payload, length);
 
-	size_t mainTopicLen = strlen(_baseTopic);
-	// Processing topic basetopic - command send all data from device.
-	if (strlen(topic) == mainTopicLen &&  strcmp(_baseTopic, topic) == 0)
+	size_t baseTopicLen = strlen(_baseTopic);
+
+	if (!startsWith(topic, _baseTopic))
+	{
+		return;
+	}
+
+	// Processing basetopic - command send all data from device.
+	if (strlen(topic) == baseTopicLen)
 	{
 		_forceSendAllData = true;
 		return;
 	}
 
-	String topicContent = String(topic);
-	// Remove prefix  basetopic/
-	if (topicContent.length > mainTopicLen)
-	{
-		topicContent.remove(0, mainTopicLen + 1);
-	}
+	// Remove prefix basetopic/
+	removeStart(topic, baseTopicLen + 1);
+
 	// All other topics finished with /set
-	String topicEnd = buildTopic(2, TOPIC_SEPARATOR, SET_COMMAND);
-	if (!topicContent.endsWith(topicEnd))
+	strConcatenate(_topic, 2, TOPIC_SEPARATOR, SET_COMMAND);
+
+	if (!endsWith(topic, _topic))
 	{
 		return;
 	}
+
 	// Remove /set
-	topicContent.remove(topicContent.length - topicEnd.length, topicEnd.length);
+	removeEnd(topic, strlen(_topic));
 
 	// Processing topic basetopic/mode/set: heat/cold
-	if (topicContent.equals(MODE_COMMAND))
+	if (isEqual(topic, MODE_COMMAND))
 	{
-		if (strncmp((char*)payload, HEAT_VALUE, strlen(HEAT_VALUE)) == 0)
+		if (isEqual((char*)payload, HEAT_VALUE))
 		{
 			_mode = Heat;
 			_forceSendAllData = true;
+			SaveConfiguration();
 			return;
 		}
 
-		if (strncmp((char*)payload, COLD_VALUE, strlen(COLD_VALUE)) == 0)
+		if (isEqual((char*)payload, COLD_VALUE))
 		{
 			_mode = Cold;
 			_forceSendAllData = true;
+			SaveConfiguration();
 			return;
 		}
 	}
 
 	// Processing topic basetopic/temperature/set: 22.5
-	// Processing topic basetopic/state/set: on, off
-
-	String topicStart = buildTopic(4, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR);
-
-	// Set new realy status.
-	// Topic kmp/prodinowifi/relay/+/set - command which send relay status.
-	// + is relay number (0..3), payload is (0 - Off, 1 - On).
-	if (topicContent.startsWith(topicStart) && topicContent.endsWith(topicEnd))
+	if (isEqual(topic, TEMPERATURE_COMMAND))
 	{
-		int relayNumber = CharToInt(topic[topicStart.length()]);
-		if (length == 1)
-		{
-			int relayState = CharToInt(payload[0]);
-			KMPDinoWiFiESP.SetRelayState(relayNumber, relayState == 1);
-			_lastStatus[1][relayNumber] = true;
-		}
+		memcpy(_topic, payload, length);
+		_topic[length] = CH_NONE;
+		_desiredTemperature = atoff(_topic);
+		_forceSendAllData = true;
+		return;
 	}
+
+	// Processing topic basetopic/state/set: on, off
+	// TODO: Start from here.
 }
 
 char getState(bool state)
@@ -442,47 +399,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 	//read configuration from FS json
 	Serial.println("Mounting FS...");
 
-	if (!SPIFFS.begin())
-	{
-		Serial.println("Failed to mount FS");
-	}
-	else
-	{
-		Serial.println("The file system is mounted.");
-
-		if (SPIFFS.exists(CONFIG_FILE_NAME))
-		{
-			//file exists, reading and loading
-			Serial.println("Reading configuration file");
-			File configFile = SPIFFS.open(CONFIG_FILE_NAME, "r");
-			if (configFile)
-			{
-				Serial.println("Opening configuration file");
-				size_t size = configFile.size();
-				// Allocate a buffer to store contents of the file.
-				std::unique_ptr<char[]> buf(new char[size]);
-
-				configFile.readBytes(buf.get(), size);
-				DynamicJsonBuffer jsonBuffer;
-				JsonObject& json = jsonBuffer.parseObject(buf.get());
-				//json.printTo(Serial);
-				if (json.success())
-				{
-					Serial.println("\nJson is parsed");
-
-					strcpy(_mqttServer, json[MQTT_SERVER_KEY]);
-					strcpy(_mqttPort, json[MQTT_PORT_KEY]);
-					strcpy(_mqttClientId, json[MQTT_CLIENT_ID_KEY]);
-					strcpy(_mqttUser, json[MQTT_USER_KEY]);
-					strcpy(_mqttPass, json[MQTT_PASS_KEY]);
-				}
-				else
-				{
-					Serial.println("Loading json configuration is failed");
-				}
-			}
-		}
-	}
+	ReadConfiguration();
 
 	// The extra parameters to be configured (can be either global or just in the setup)
 	// After connecting, parameter.getValue() will get you the configured value
@@ -514,8 +431,6 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 
 	if (_shouldSaveConfig)
 	{
-		Serial.println("Saving configuration...");
-
 		//read updated parameters
 		strcpy(_mqttServer, customMqttServer.getValue());
 		strcpy(_mqttPort, customMqttPort.getValue());
@@ -523,28 +438,84 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 		strcpy(_mqttUser, customMqttUser.getValue());
 		strcpy(_mqttPass, customMqttPass.getValue());
 
-		DynamicJsonBuffer jsonBuffer;
-		JsonObject& json = jsonBuffer.createObject();
-
-		json[MQTT_SERVER_KEY] = _mqttServer;
-		json[MQTT_PORT_KEY] = _mqttPort;
-		json[MQTT_CLIENT_ID_KEY] = _mqttClientId;
-		json[MQTT_USER_KEY] = _mqttUser;
-		json[MQTT_PASS_KEY] = _mqttPass;
-
-		File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
-		if (!configFile) {
-			Serial.println("Failed to open a configuration file for writing.");
-		}
-		else
-		{
-			Serial.println("Configuration is saved.");
-		}
-
-		json.prettyPrintTo(Serial);
-		json.printTo(configFile);
-		configFile.close();
+		SaveConfiguration();
 	}
 
 	return true;
+}
+
+void ReadConfiguration()
+{
+	if (!SPIFFS.begin())
+	{
+		Serial.println("Failed to mount FS");
+	}
+	else
+	{
+		Serial.println("The file system is mounted.");
+
+		if (SPIFFS.exists(CONFIG_FILE_NAME))
+		{
+			//file exists, reading and loading
+			Serial.println("Reading configuration file");
+			File configFile = SPIFFS.open(CONFIG_FILE_NAME, "r");
+			if (configFile)
+			{
+				Serial.println("Opening configuration file");
+				size_t size = configFile.size();
+				// Allocate a buffer to store contents of the file.
+				std::unique_ptr<char[]> buf(new char[size]);
+
+				configFile.readBytes(buf.get(), size);
+				DynamicJsonBuffer jsonBuffer;
+				JsonObject& json = jsonBuffer.parseObject(buf.get());
+				json.printTo(Serial);
+				if (json.success())
+				{
+					Serial.println("\nJson is parsed");
+
+					strcpy(_mqttServer, json[MQTT_SERVER_KEY]);
+					strcpy(_mqttPort, json[MQTT_PORT_KEY]);
+					strcpy(_mqttClientId, json[MQTT_CLIENT_ID_KEY]);
+					strcpy(_mqttUser, json[MQTT_USER_KEY]);
+					strcpy(_mqttPass, json[MQTT_PASS_KEY]);
+					_mode = (Mode)atoi(json[MODE_KEY]);
+					_isOn = atoi(json[MODE_KEY]) == 1 ? true : false;
+				}
+				else
+				{
+					Serial.println("Loading json configuration is failed");
+				}
+			}
+		}
+	}
+}
+
+void SaveConfiguration()
+{
+	Serial.println("Saving configuration...");
+
+	DynamicJsonBuffer jsonBuffer;
+	JsonObject& json = jsonBuffer.createObject();
+
+	json[MQTT_SERVER_KEY] = _mqttServer;
+	json[MQTT_PORT_KEY] = _mqttPort;
+	json[MQTT_CLIENT_ID_KEY] = _mqttClientId;
+	json[MQTT_USER_KEY] = _mqttUser;
+	json[MQTT_PASS_KEY] = _mqttPass;
+	json[MODE_KEY] = (int)_mode;
+	json[STATE] = _isOn ? 1 : 0;
+
+	File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
+	if (!configFile) {
+		Serial.println("Failed to open a configuration file for writing.");
+	}
+	else
+	{
+		Serial.println("Configuration is saved.");
+	}
+
+	json.prettyPrintTo(Serial);
+	json.printTo(configFile);
+	configFile.close();
 }

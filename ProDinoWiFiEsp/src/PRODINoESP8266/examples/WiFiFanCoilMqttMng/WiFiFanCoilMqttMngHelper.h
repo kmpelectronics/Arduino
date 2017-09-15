@@ -1,7 +1,7 @@
-// WiFiFanCoilMqttMngParams.h
+// WiFiFanCoilMqttMngHelper.h
 
-#ifndef _WIFIFANCOILMQTTMNGPARAMS_h
-#define _WIFIFANCOILMQTTMNGPARAMS_h
+#ifndef _WIFIFANCOILMQTTMNGHELPER_h
+#define _WIFIFANCOILMQTTMNGHELPER_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "Arduino.h"
@@ -23,17 +23,19 @@ const char* MQTT_CLIENT_ID_KEY = "mqttClientId";
 const char* MQTT_USER_KEY = "mqttUser";
 const char* MQTT_PASS_KEY = "mqttPass";
 const char* BASE_TOPIC_KEY = "baseTopic";
+const char* MODE_KEY = "mode";
 const char* CONFIG_FILE_NAME = "/config.json";
 
 const char* TOPIC_SEPARATOR = "/";
-const char* HUMIDITY_SENSOR = "humidity";
-const char* TEMPERATURE_SENSOR = "temperature";
+const char* HUMIDITY_COMMAND = "humidity";
+const char* TEMPERATURE_COMMAND = "temperature";
 const char* RELAY = "relay";
 const char* OPTO_INPUT = "optoin";
 const char* SET_COMMAND = "set";
 const char* HEAT_VALUE = "heat";
 const char* COLD_VALUE = "cold";
 const char* MODE_COMMAND = "mode";
+const char* STATE = "state";
 
 const float FUN_SWITCH_LEVEL[3] = { 0.5, 1.0, 2.0 };
 
