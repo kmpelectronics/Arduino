@@ -146,14 +146,6 @@ void strConcatenate(char* buffer, int num, ...)
 	va_end(valist);
 }
 
-void removeSubstring(char *str, const char *toRemove)
-{
-	while (str = strstr(str, toRemove))
-	{
-		memmove(str, str + strlen(toRemove), 1 + strlen(str + strlen(toRemove)));
-	}
-}
-
 void removeStart(char *str, size_t n)
 {
 	size_t len = strlen(str);
@@ -180,6 +172,15 @@ void removeEnd(char *str, size_t n)
 bool isEqual(const char *strFirst, const char *strSecond)
 {
 	return strcmp(strFirst, strSecond) == 0;
+}
+
+float roundF(float f, uint8_t precision)
+{
+	float rnd = f * (10.0f * precision);
+	rnd = (rnd > (floor(rnd) + 0.5f)) ? ceil(rnd) : floor(rnd);
+	rnd = rnd / 10.0f;
+
+	return rnd;
 }
 
 void iptoa(uint8_t * ip, char * result)

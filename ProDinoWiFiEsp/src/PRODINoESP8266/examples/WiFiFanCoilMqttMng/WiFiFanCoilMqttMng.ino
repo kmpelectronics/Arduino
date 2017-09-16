@@ -27,6 +27,8 @@
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
 #include <ArduinoJson.h>          // Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
 
+float FAN_SWITCH_LEVEL[FAN_SWITCH_LEVEL_LEN] = { 0, 0.5, 1.0 };
+
 char _mqttServer[MQTT_SERVER_LEN] = "x.cloudmqtt.com";
 char _mqttPort[MQTT_PORT_LEN] = "1883";
 char _mqttClientId[MQTT_CLIENT_ID_LEN] = "ESP8266Client";
@@ -41,12 +43,12 @@ DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
 float _dht[2];
 
 // Text buffers for topic and payload.
-char _strBuffer[128];
-char _payload[16];
+char _topicBuff[128];
+char _payloadBuff[32];
 
 // Flags for saving data
 bool _shouldSaveConfig = false;
-bool _forceSendAllData = true;
+bool _initialSendData = true;
 
 Mode _mode = Cold;
 DeviceState _deviceState = Off;
@@ -57,8 +59,8 @@ float _currentTemperature;
 float _tempCollection[TEMPERATURE_ARRAY_LEN] = { 22.0 };
 uint8_t _tempCollectPos = 0;
 // Store last measure time.
-unsigned long _mesureTempTimeout;
-uint8_t _funDegree = 0;
+unsigned long _mesureTempTime;
+uint8_t _fanDegree = 0;
 
 /**
 * @brief Execute first after start the device. Initialize hardware.
@@ -68,11 +70,11 @@ uint8_t _funDegree = 0;
 void setup(void)
 {
 	// You can open the Arduino IDE Serial Monitor window to see what the code is doing
-	Serial.begin(115200);
+	DEBUG_PRINTER.begin(115200);
 	// Init KMP ProDino WiFi-ESP board.
 	KMPDinoWiFiESP.init();
 
-	Serial.println("KMP fan coil management with Mqtt.\r\n");
+	DEBUG_PRINTLN("KMP fan coil management with Mqtt.\r\n");
 
 	//WiFiManager
 	//Local initialization. Once it's business is done, there is no need to keep it around.
@@ -81,10 +83,10 @@ void setup(void)
 	// Is OptoIn 4 is On the board is resetting WiFi configuration.
 	if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
 	{
-		Serial.println("Resetting WiFi configuration...\r\n");
+		DEBUG_PRINTLN("Resetting WiFi configuration...\r\n");
 		//reset saved settings
 		wifiManager.resetSettings();
-		Serial.println("WiFi configuration was reseted.\r\n");
+		DEBUG_PRINTLN("WiFi configuration was reseted.\r\n");
 	}
 
 	// Set save configuration callback.
@@ -119,13 +121,15 @@ void loop(void)
 	
 	collectTemperature();
 	processTemperature();
-	funControl();
+	fanCoilControl();
 
 	// Publish information into MQTT.
-	publishData(_forceSendAllData);
-	publishDHTSensorData(_forceSendAllData);
-	
-	_forceSendAllData = false;
+	if (_initialSendData)
+	{
+		DeviceData deviceData = (DeviceData)(CurrentTemp | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | DeviceIsStarted);
+		publishData(deviceData);
+		_initialSendData = false;
+	}
 }
 
 /**
@@ -145,9 +149,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	}
 
 	// Processing basetopic - command send all data from device.
-	if (strlen(topic) == baseTopicLen)
+	if (strlen(topic) == baseTopicLen && length == 0)
 	{
-		_forceSendAllData = true;
+		DeviceData deviceData = (DeviceData)(CurrentTemp | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState );
+		publishData(deviceData);
 		return;
 	}
 
@@ -155,116 +160,75 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	removeStart(topic, baseTopicLen + 1);
 
 	// All other topics finished with /set
-	strConcatenate(_strBuffer, 2, TOPIC_SEPARATOR, SET_COMMAND);
+	strConcatenate(_topicBuff, 2, TOPIC_SEPARATOR, TOPIC_SET);
 
-	if (!endsWith(topic, _strBuffer))
+	if (!endsWith(topic, _topicBuff))
 	{
 		return;
 	}
 
 	// Remove /set
-	removeEnd(topic, strlen(_strBuffer));
+	removeEnd(topic, strlen(_topicBuff));
 
 	// Processing topic basetopic/mode/set: heat/cold
-	if (isEqual(topic, MODE_COMMAND))
+	if (isEqual(topic, TOPIC_MODE))
 	{
-		if (isEqual((char*)payload, HEAT_VALUE))
+		if (isEqual((char*)payload, PAYLOAD_HEAT))
 		{
 			_mode = Heat;
-			_forceSendAllData = true;
-			SaveConfiguration();
+			publishData(CurrentMode);
+			//SaveConfiguration();
 			return;
 		}
 
-		if (isEqual((char*)payload, COLD_VALUE))
+		if (isEqual((char*)payload, PAYLOAD_COLD))
 		{
 			_mode = Cold;
-			_forceSendAllData = true;
-			SaveConfiguration();
+			publishData(CurrentMode);
+			//SaveConfiguration();
 			return;
 		}
 	}
 
-	// Processing topic basetopic/temperature/set: 22.5
-	if (isEqual(topic, TEMPERATURE_COMMAND))
+	// Processing topic basetopic/desiredtemp/set: 22.5
+	if (isEqual(topic, TOPIC_DESIRED_TEMPERATURE))
 	{
-		memcpy(_strBuffer, payload, length);
-		_strBuffer[length] = CH_NONE;
-		_desiredTemperature = atoff(_strBuffer);
-		_forceSendAllData = true;
+		memcpy(_topicBuff, payload, length);
+		_topicBuff[length] = CH_NONE;
+		float temp = atoff(_topicBuff);
+		_desiredTemperature = roundF(temp, TEMPERATURE_PRECISION);
+		
+		publishData(CurrentMode);
 		return;
 	}
 
 	// Processing topic basetopic/state/set: on, off
-	if (isEqual(topic, STATE_COMMAND))
+	if (isEqual(topic, TOPIC_DEVICE_STATE))
 	{
-		memcpy(_strBuffer, payload, length);
-		_strBuffer[length] = CH_NONE;
+		memcpy(_topicBuff, payload, length);
+		_topicBuff[length] = CH_NONE;
 
-		if (isEqual(_strBuffer, ON_STATE))
+		if (isEqual(_topicBuff, PAYLOAD_ON))
 		{
 			_deviceState = On;
-			_forceSendAllData = true;
-			SaveConfiguration();
+			publishData(CurrentDeviceState);
+			//SaveConfiguration();
 			return;
 		}
 		
-		if (isEqual(_strBuffer, OFF_STATE))
+		if (isEqual(_topicBuff, PAYLOAD_OFF))
 		{
 			_deviceState = Off;
-			_forceSendAllData = true;
-			SaveConfiguration();
+			publishData(CurrentDeviceState);
+			//SaveConfiguration();
 			return;
 		}
 	}
 }
 
-/**
-* @brief Publish information in the MQTT server.
-* @param isForceSend is set to true send all information from device, if false send only changed information.
-* 
-* @return void
-*/
-//void publishData(bool forceSendAllData)
-//{
-//	char state[2];
-//	state[1] = '\0';
-//	// Get current Opto input and relay statuses.
-//	for (byte i = 0; i < RELAY_COUNT; i++)
-//	{
-//		bool rState = KMPDinoWiFiESP.GetRelayState(i);
-//		if (_lastStatus[0][i] != rState || _lastStatus[1][i] || isForceSend)
-//		{
-//			_lastStatus[0][i] = rState;
-//			_lastStatus[1][i] = false;
-//
-//			state[0] = IntToChar(i);
-//			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, state); // kmp/prodinowifi/relay/0
-//			
-//			state[0] = getState(rState);
-//			publish(topic.c_str(), state);
-//		}
-//	}
-//
-//	for (byte i = 0; i < OPTOIN_COUNT; i++)
-//	{
-//		bool oiState = KMPDinoWiFiESP.GetOptoInState(i);
-//		if (_lastStatus[2][i] != oiState || isForceSend)
-//		{
-//			_lastStatus[2][i] = oiState;
-//
-//			state[0] = IntToChar(i);
-//			String topic = buildTopic(5, MAIN_TOPIC, TOPIC_SEPARATOR, OPTO_INPUT, TOPIC_SEPARATOR, state); // kmp/prodinowifi/optoin/0
-//
-//			state[0] = getState(oiState);
-//			publish(topic.c_str(), state);
-//		}
-//	}
-//}
-
 void collectTemperature()
 {
-	if (millis() > _mesureTempTimeout)
+	if (millis() > _mesureTempTime)
 	{
 		if (_tempCollectPos == TEMPERATURE_ARRAY_LEN)
 		{
@@ -274,14 +238,14 @@ void collectTemperature()
 		_tempCollection[_tempCollectPos++] = _dhtSensor.readTemperature();
 
 		// Set next time to read data.
-		_mesureTempTimeout = millis() + CHECK_HT_INTERVAL_MS;
+		_mesureTempTime = millis() + CHECK_HT_INTERVAL_MS;
 	}
 }
 
 void processTemperature()
 {
 	// Get average value.
-	double temp;
+	double temp = 0.0;
 	for (uint8_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
 	{
 		temp += _tempCollection[i];
@@ -289,20 +253,22 @@ void processTemperature()
 
 	temp /= TEMPERATURE_ARRAY_LEN;
 
+	temp = roundF(temp, TEMPERATURE_PRECISION);
+
 	if (_currentTemperature != temp)
 	{
 		_currentTemperature = temp;
-		publishData(false, true);
+		publishData(CurrentTemp);
 	}
 }
 
-void funControl()
+void fanCoilControl()
 {
 	if (_deviceState == Off)
 	{
-		if (_funDegree != 0)
+		if (_fanDegree != 0)
 		{
-			setFunDegree(0);
+			setFanDegree(0);
 		}
 
 		return;
@@ -310,62 +276,96 @@ void funControl()
 
 	float diffTemp = _mode == Cold ? _currentTemperature - _desiredTemperature /* Cold */ : _desiredTemperature - _currentTemperature /* Heat */;
 
-	if (diffTemp <= 0)
+	// Bypass the fan coil.
+	if (diffTemp < -1.0)
 	{
-		// TODO: Start from here.
+		// TODO: Add bypass logic.
 	}
-}
 
-void setFunDegree(uint degree)
-{
-	if (degree != _funDegree)
+	uint8_t degree = FAN_SWITCH_LEVEL_LEN;
+	for (uint8_t i = 0; i < FAN_SWITCH_LEVEL_LEN; i++)
 	{
-		_funDegree == degree;
-		publishData(true);
+		if (diffTemp <= FAN_SWITCH_LEVEL[i])
+		{
+			degree = i;
+			break;
+		}
 	}
-	
-	// TODO: Switch relays.
+
+	setFanDegree(degree);
 }
 
-void publishData(bool funDegree = false, bool currentTemperature = false, bool desiredTemperature = false, bool deviceState = false, bool mode = false)
-{
-
-}
-
-
-/**
-* @brief Read data from a sensor for humidity and temperature.
-* @param isForceSend Is set to true send humidity and temperature, if false send only changed data on occurred _mesureTimeout.
-*
-* @return void
+/*
+* A fan degree: 0 - stopped, 1 - low fan speed, 2 - medium, 3 - high
 */
-void publishDHTSensorData(bool isForceSend)
+void setFanDegree(uint degree)
 {
-	// Publish humidity or temperature if is isForceSend or time to send occurred and value is changed.
-	if (millis() > _mesureTimeout || isForceSend)
+	if (degree == _fanDegree)
 	{
-		_dhtSensor.read(true);
-		float humidity = _dhtSensor.readHumidity();
-		float temperature = _dhtSensor.readTemperature();
+		return;
+	}
 
-		if (_dht[0]	!= humidity || isForceSend)
-		{
-			_dht[0] = humidity;
-			FloatToChars(humidity, 1, _payload);
-			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, HUMIDITY_SENSOR); // kmp/prodinowifi/humidity
-			publish(topic.c_str(), _payload);
-		}
+	// Switch relay off.
+	if (_fanDegree != 0)
+	{
+		KMPDinoWiFiESP.SetRelayState(_fanDegree - 1, false);
+	}
 
-		if (_dht[1] != temperature || isForceSend)
-		{
-			_dht[1] = temperature;
-			FloatToChars(temperature, 1, _payload);
-			String topic = buildTopic(3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); // kmp/prodinowifi/temperature
-			publish(topic.c_str(), _payload);
-		}
+	delay(100);
+	
+	KMPDinoWiFiESP.SetRelayState(_fanDegree - 1, true);
 
-		// Set next time to read data.
-		_mesureTimeout = millis() + CHECK_HT_INTERVAL_MS;
+	_fanDegree = degree;
+	publishData(FanDegree);
+}
+
+void publishData(DeviceData deviceData)
+{
+	if (CHECK_ENUM(deviceData, CurrentTemp))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
+		FloatToChars(_currentTemperature, TEMPERATURE_PRECISION, _payloadBuff);
+
+		mqttPublish(_topicBuff, _payloadBuff);
+	}
+
+	if (CHECK_ENUM(deviceData, FanDegree))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_FAN_DEGREE);
+		IntToChars(_fanDegree, _payloadBuff);
+
+		mqttPublish(_topicBuff, _payloadBuff);
+	}
+
+	if (CHECK_ENUM(deviceData, DesiredTemp))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DESIRED_TEMPERATURE);
+		FloatToChars(_desiredTemperature, TEMPERATURE_PRECISION, _payloadBuff);
+
+		mqttPublish(_topicBuff, _payloadBuff);
+	}
+
+	if (CHECK_ENUM(deviceData, CurrentMode))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_MODE);
+
+		const char * mode = _mode == Cold ? PAYLOAD_COLD : PAYLOAD_HEAT;
+
+		mqttPublish(_topicBuff, (char*)mode);
+	}
+
+	if (CHECK_ENUM(deviceData, CurrentDeviceState))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DEVICE_STATE);
+
+		const char * mode = _deviceState == On ? PAYLOAD_ON : PAYLOAD_OFF;
+
+		mqttPublish(_topicBuff, (char*)mode);
+	}
+
+	if (CHECK_ENUM(deviceData, DeviceIsStarted))
+	{
+		mqttPublish(_baseTopic, (char*)PAYLOAD_STARTED);
 	}
 }
 
@@ -376,7 +376,7 @@ void publishDHTSensorData(bool isForceSend)
 *
 * @return void
 */
-void publish(const char* topic, char* payload)
+void mqttPublish(const char* topic, char* payload)
 {
 	printTopicAndPayload("Publish", topic, payload, strlen(payload));
 	
@@ -394,15 +394,15 @@ void publish(const char* topic, char* payload)
 */
 void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length)
 {
-	Serial.print(operationName);
-	Serial.print(" topic [");
-	Serial.print(topic);
-	Serial.print("] payload [");
+	DEBUG_PRINT(operationName);
+	DEBUG_PRINT(" topic [");
+	DEBUG_PRINT(topic);
+	DEBUG_PRINT("] payload [");
 	for (uint i = 0; i < length; i++)
 	{
-		Serial.print((char)payload[i]);
+		DEBUG_PRINT((char)payload[i]);
 	}
-	Serial.println("]");
+	DEBUG_PRINTLN("]");
 }
 
 /**
@@ -414,9 +414,9 @@ bool connectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
 	{
-		Serial.print("Reconnecting [");
-		Serial.print(WiFi.SSID());
-		Serial.println("]...");
+		DEBUG_PRINT("Reconnecting [");
+		DEBUG_PRINT(WiFi.SSID());
+		DEBUG_PRINTLN("]...");
 
 		WiFi.begin();
 
@@ -425,8 +425,8 @@ bool connectWiFi()
 			return false;
 		}
 
-		Serial.print("IP address: ");
-		Serial.println(WiFi.localIP());
+		DEBUG_PRINT("IP address: ");
+		DEBUG_PRINTLN(WiFi.localIP());
 	}
 
 	return true;
@@ -441,29 +441,24 @@ bool connectMqtt()
 {
 	if (!_mqttClient.connected())
 	{
-		Serial.println("Attempting MQTT connection...");
+		DEBUG_PRINTLN("Attempting MQTT connection...");
 
 		if (_mqttClient.connect(_mqttClientId, _mqttUser, _mqttPass))
 		{
-			Serial.println("Connected.");
+			DEBUG_PRINTLN("Connected.");
 			// Subscribe for topics:
-			//  kmp/prodinowifi
-			_mqttClient.subscribe(MAIN_TOPIC);
-			//  kmp/prodinowifi/relay/+/set
-			String topic = buildTopic(7, MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND);
-			// TODO: New implementation, should be test it.
-			const char * params[] = { MAIN_TOPIC, TOPIC_SEPARATOR, RELAY, TOPIC_SEPARATOR, "+", TOPIC_SEPARATOR, SET_COMMAND };
-			buildTopicNew(_strBuffer, params, 7);
-			Serial.print("buildTopicNew: ");
-			Serial.println(_strBuffer);
-
-			_mqttClient.subscribe(topic.c_str());
+			//  basetopic
+			_mqttClient.subscribe(_baseTopic);
+			
+			//  basetopic/+/set. This pattern include:  basetopic/mode/set, basetopic/desiredtemp/set, basetopic/state/set
+			strConcatenate(_topicBuff, 4, _baseTopic, TOPIC_SEPARATOR, EVERY_ONE_LEVEL_TOPIC, TOPIC_SET);
+			_mqttClient.subscribe(_topicBuff);
 		}
 		else
 		{
-			Serial.print("failed, rc=");
-			Serial.print(_mqttClient.state());
-			Serial.println(" try again after 5 seconds");
+			DEBUG_PRINT("failed, rc=");
+			DEBUG_PRINT(_mqttClient.state());
+			DEBUG_PRINTLN(" try again after 5 seconds");
 			// Wait 5 seconds before retrying
 			delay(5000);
 		}
@@ -479,7 +474,7 @@ bool connectMqtt()
 */
 void saveConfigCallback()
 {
-	Serial.println("Should save config");
+	DEBUG_PRINTLN("Should save config");
 	_shouldSaveConfig = true;
 }
 
@@ -492,7 +487,7 @@ void saveConfigCallback()
 bool mangeConnectParamers(WiFiManager* wifiManager)
 {
 	//read configuration from FS json
-	Serial.println("Mounting FS...");
+	DEBUG_PRINTLN("Mounting FS...");
 
 	ReadConfiguration();
 
@@ -517,12 +512,12 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 	// auto generated name ESP + ChipID
 	if (!wifiManager->autoConnect())
 	{
-		Serial.println("Doesn't connect.");
+		DEBUG_PRINTLN("Doesn't connect.");
 		return false;
 	}
 
 	//if you get here you have connected to the WiFi
-	Serial.println("Connected.");
+	DEBUG_PRINTLN("Connected.");
 
 	if (_shouldSaveConfig)
 	{
@@ -543,20 +538,20 @@ void ReadConfiguration()
 {
 	if (!SPIFFS.begin())
 	{
-		Serial.println("Failed to mount FS");
+		DEBUG_PRINTLN("Failed to mount FS");
 	}
 	else
 	{
-		Serial.println("The file system is mounted.");
+		DEBUG_PRINTLN("The file system is mounted.");
 
 		if (SPIFFS.exists(CONFIG_FILE_NAME))
 		{
 			//file exists, reading and loading
-			Serial.println("Reading configuration file");
+			DEBUG_PRINTLN("Reading configuration file");
 			File configFile = SPIFFS.open(CONFIG_FILE_NAME, "r");
 			if (configFile)
 			{
-				Serial.println("Opening configuration file");
+				DEBUG_PRINTLN("Opening configuration file");
 				size_t size = configFile.size();
 				// Allocate a buffer to store contents of the file.
 				std::unique_ptr<char[]> buf(new char[size]);
@@ -564,22 +559,25 @@ void ReadConfiguration()
 				configFile.readBytes(buf.get(), size);
 				DynamicJsonBuffer jsonBuffer;
 				JsonObject& json = jsonBuffer.parseObject(buf.get());
-				json.printTo(Serial);
+#ifdef WIFIFCMM
+				json.printTo(DEBUG_PRINTER);
+#endif
 				if (json.success())
 				{
-					Serial.println("\nJson is parsed");
+					DEBUG_PRINTLN("\nJson is parsed");
 
 					strcpy(_mqttServer, json[MQTT_SERVER_KEY]);
 					strcpy(_mqttPort, json[MQTT_PORT_KEY]);
 					strcpy(_mqttClientId, json[MQTT_CLIENT_ID_KEY]);
 					strcpy(_mqttUser, json[MQTT_USER_KEY]);
 					strcpy(_mqttPass, json[MQTT_PASS_KEY]);
-					_mode = (Mode)atoi(json[MODE_KEY]);
-					_deviceState = atoi(json[STATE_COMMAND]) == 1 ? On : Off;
+					// After start device we should set this settings.
+					//_mode = (Mode)atoi(json[MODE_KEY]);
+					//_deviceState = atoi(json[TOPIC_DEVICE_STATE]) == 1 ? On : Off;
 				}
 				else
 				{
-					Serial.println("Loading json configuration is failed");
+					DEBUG_PRINTLN("Loading json configuration is failed");
 				}
 			}
 		}
@@ -588,7 +586,7 @@ void ReadConfiguration()
 
 void SaveConfiguration()
 {
-	Serial.println("Saving configuration...");
+	DEBUG_PRINTLN("Saving configuration...");
 
 	DynamicJsonBuffer jsonBuffer;
 	JsonObject& json = jsonBuffer.createObject();
@@ -598,16 +596,17 @@ void SaveConfiguration()
 	json[MQTT_CLIENT_ID_KEY] = _mqttClientId;
 	json[MQTT_USER_KEY] = _mqttUser;
 	json[MQTT_PASS_KEY] = _mqttPass;
-	json[MODE_KEY] = (int)_mode;
-	json[STATE_COMMAND] = _deviceState == On ? 1 : 0;
+	// We shouldn't save this settings.
+	//json[MODE_KEY] = (int)_mode;
+	//json[TOPIC_DEVICE_STATE] = _deviceState == On ? 1 : 0;
 
 	File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
 	if (!configFile) {
-		Serial.println("Failed to open a configuration file for writing.");
+		DEBUG_PRINTLN("Failed to open a configuration file for writing.");
 	}
 	else
 	{
-		Serial.println("Configuration is saved.");
+		DEBUG_PRINTLN("Configuration is saved.");
 	}
 
 	json.prettyPrintTo(Serial);

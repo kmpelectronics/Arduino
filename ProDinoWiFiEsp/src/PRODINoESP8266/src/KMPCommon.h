@@ -96,7 +96,7 @@ bool atoip(char *data, uint8_t* result);
  *                      12323& | 12323
  *                      a123\0 | error - first char (a) is not digit.
  *                      77777\0| error - is too big result > 65535.
- * \param result Result of convention.
+ * \param result The result of convention.
  * 
  * \return bool If result equal:
  *                  - true - convert OK;
@@ -121,13 +121,15 @@ bool endsWith(const char* str, const char* suffix);
 
 bool startAndEndWith(const char* str, const char* prefix, const char* suffix);
 
-void removeSubstring(char *str, const char *toRemove);
-
 void removeStart(char *str, size_t n);
 
 void removeEnd(char *str, size_t n);
 
 bool isEqual(const char *strFirst, const char *strSecond);
+
+float roundF(float f, uint8_t precision);
+
+#define CHECK_ENUM(var,enm) ((var & enm) != 0)
 
 /**
 * @brief Concatenate parameters in buffer.
