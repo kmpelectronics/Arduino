@@ -3,25 +3,21 @@
 #ifndef _WIFIFANCOILMQTTMNGHELPER_h
 #define _WIFIFANCOILMQTTMNGHELPER_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
-	#include "Arduino.h"
-#else
-	#include "WProgram.h"
-#endif
+#include "Arduino.h"
 
 // Uncomment to enable printing out nice debug messages.
-//#define WIFIFCMM_DEBUG
+#define WIFIFCMM_DEBUG
 
 // Define where debug output will be printed.
-#define DEBUG_PRINTER Serial
+#define DEBUG_FC Serial
 
 // Setup debug printing macros.
 #ifdef WIFIFCMM_DEBUG
-#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
-#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+#define DEBUG_FC_PRINT(...) { DEBUG_FC.print(__VA_ARGS__); }
+#define DEBUG_FC_PRINTLN(...) { DEBUG_FC.println(__VA_ARGS__); }
 #else
-#define DEBUG_PRINT(...) {}
-#define DEBUG_PRINTLN(...) {}
+#define DEBUG_FC_PRINT(...) {}
+#define DEBUG_FC_PRINTLN(...) {}
 #endif
 
 const uint8_t FAN_SWITCH_LEVEL_LEN = 3;
@@ -60,6 +56,11 @@ const char* TOPIC_FAN_DEGREE = "fandegree";
 const char* PAYLOAD_STARTED = "started";
 
 const char* EVERY_ONE_LEVEL_TOPIC = "+";
+
+const float FAN_SWITCH_LEVEL[FAN_SWITCH_LEVEL_LEN] = { 0, 0.5, 1.0 };
+
+const float MIN_DESIRED_TEMPERATURE = 15;
+const float MAX_DESIRED_TEMPERATURE = 30;
 
 enum Mode
 {

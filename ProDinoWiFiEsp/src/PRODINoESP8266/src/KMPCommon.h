@@ -127,6 +127,8 @@ void removeEnd(char *str, size_t n);
 
 bool isEqual(const char *strFirst, const char *strSecond);
 
+bool isEqual(const char *strFirst, const char *strSecond, size_t length);
+
 float roundF(float f, uint8_t precision);
 
 #define CHECK_ENUM(var,enm) ((var & enm) != 0)

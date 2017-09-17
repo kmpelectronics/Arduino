@@ -17,6 +17,7 @@
 #include <KMPCommon.h>
 #include <ESP8266WiFi.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 #include <DNSServer.h>
@@ -26,8 +27,6 @@
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
 #include <ArduinoJson.h>          // Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
-
-float FAN_SWITCH_LEVEL[FAN_SWITCH_LEVEL_LEN] = { 0, 0.5, 1.0 };
 
 char _mqttServer[MQTT_SERVER_LEN] = "x.cloudmqtt.com";
 char _mqttPort[MQTT_PORT_LEN] = "1883";
@@ -46,21 +45,23 @@ float _dht[2];
 char _topicBuff[128];
 char _payloadBuff[32];
 
-// Flags for saving data
 bool _shouldSaveConfig = false;
 bool _initialSendData = true;
+bool _isDHTSensorFound = true;
 
 Mode _mode = Cold;
 DeviceState _deviceState = Off;
+DeviceState _lastDeviceState;
 
 float _desiredTemperature = 22.0;
-float _currentTemperature;
+float _currentTemperature = _desiredTemperature;
 
-float _tempCollection[TEMPERATURE_ARRAY_LEN] = { 22.0 };
+float _tempCollection[TEMPERATURE_ARRAY_LEN];
 uint8_t _tempCollectPos = 0;
 // Store last measure time.
-unsigned long _mesureTempTime;
+unsigned long _mesureTempTime = 0;
 uint8_t _fanDegree = 0;
+
 
 /**
 * @brief Execute first after start the device. Initialize hardware.
@@ -70,11 +71,17 @@ uint8_t _fanDegree = 0;
 void setup(void)
 {
 	// You can open the Arduino IDE Serial Monitor window to see what the code is doing
-	DEBUG_PRINTER.begin(115200);
+	DEBUG_FC.begin(115200);
 	// Init KMP ProDino WiFi-ESP board.
 	KMPDinoWiFiESP.init();
+	KMPDinoWiFiESP.SetAllRelaysOff();
 
-	DEBUG_PRINTLN("KMP fan coil management with Mqtt.\r\n");
+	DEBUG_FC_PRINTLN("KMP fan coil management with Mqtt.\r\n");
+
+	for (size_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
+	{
+		_tempCollection[i] = _desiredTemperature;
+	}
 
 	//WiFiManager
 	//Local initialization. Once it's business is done, there is no need to keep it around.
@@ -83,10 +90,10 @@ void setup(void)
 	// Is OptoIn 4 is On the board is resetting WiFi configuration.
 	if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
 	{
-		DEBUG_PRINTLN("Resetting WiFi configuration...\r\n");
+		DEBUG_FC_PRINTLN("Resetting WiFi configuration...\r\n");
 		//reset saved settings
 		wifiManager.resetSettings();
-		DEBUG_PRINTLN("WiFi configuration was reseted.\r\n");
+		DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
 	}
 
 	// Set save configuration callback.
@@ -117,12 +124,6 @@ void loop(void)
 		return;
 	}
 
-	_mqttClient.loop();
-	
-	collectTemperature();
-	processTemperature();
-	fanCoilControl();
-
 	// Publish information into MQTT.
 	if (_initialSendData)
 	{
@@ -130,6 +131,12 @@ void loop(void)
 		publishData(deviceData);
 		_initialSendData = false;
 	}
+
+	_mqttClient.loop();
+	
+	collectTemperature();
+	processTemperature();
+	fanCoilControl();
 }
 
 /**
@@ -139,7 +146,7 @@ void loop(void)
 */
 void callback(char* topic, byte* payload, unsigned int length) {
 
-	printTopicAndPayload("Subscribe", topic, (char*)payload, length);
+	printTopicAndPayload("Call back", topic, (char*)payload, length);
 
 	size_t baseTopicLen = strlen(_baseTopic);
 
@@ -173,21 +180,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	// Processing topic basetopic/mode/set: heat/cold
 	if (isEqual(topic, TOPIC_MODE))
 	{
-		if (isEqual((char*)payload, PAYLOAD_HEAT))
+		if (isEqual((char*)payload, PAYLOAD_HEAT, length))
 		{
 			_mode = Heat;
-			publishData(CurrentMode);
-			//SaveConfiguration();
-			return;
 		}
 
-		if (isEqual((char*)payload, PAYLOAD_COLD))
+		if (isEqual((char*)payload, PAYLOAD_COLD, length))
 		{
 			_mode = Cold;
-			publishData(CurrentMode);
-			//SaveConfiguration();
-			return;
 		}
+
+		publishData(CurrentMode);
+		//SaveConfiguration();
+		return;
 	}
 
 	// Processing topic basetopic/desiredtemp/set: 22.5
@@ -195,34 +200,34 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	{
 		memcpy(_topicBuff, payload, length);
 		_topicBuff[length] = CH_NONE;
-		float temp = atoff(_topicBuff);
-		_desiredTemperature = roundF(temp, TEMPERATURE_PRECISION);
 		
-		publishData(CurrentMode);
+		float temp = atof(_topicBuff);
+		float roundTemp = roundF(temp, TEMPERATURE_PRECISION);
+		if (roundTemp >= MIN_DESIRED_TEMPERATURE && roundTemp <= MAX_DESIRED_TEMPERATURE)
+		{
+			_desiredTemperature = roundTemp;
+		}
+		
+		publishData(DesiredTemp);
 		return;
 	}
 
 	// Processing topic basetopic/state/set: on, off
 	if (isEqual(topic, TOPIC_DEVICE_STATE))
 	{
-		memcpy(_topicBuff, payload, length);
-		_topicBuff[length] = CH_NONE;
-
-		if (isEqual(_topicBuff, PAYLOAD_ON))
+		if (isEqual((char*)payload, PAYLOAD_ON, length))
 		{
-			_deviceState = On;
-			publishData(CurrentDeviceState);
-			//SaveConfiguration();
-			return;
+			_deviceState = _lastDeviceState = On;
 		}
 		
-		if (isEqual(_topicBuff, PAYLOAD_OFF))
+		if (isEqual((char*)payload, PAYLOAD_OFF, length))
 		{
-			_deviceState = Off;
-			publishData(CurrentDeviceState);
-			//SaveConfiguration();
-			return;
+			_deviceState = _lastDeviceState = Off;
 		}
+
+		publishData(CurrentDeviceState);
+		//SaveConfiguration();
+		return;
 	}
 }
 
@@ -230,16 +235,63 @@ void collectTemperature()
 {
 	if (millis() > _mesureTempTime)
 	{
-		if (_tempCollectPos == TEMPERATURE_ARRAY_LEN)
+		if (_tempCollectPos >= TEMPERATURE_ARRAY_LEN)
 		{
 			_tempCollectPos = 0;
 		}
 
-		_tempCollection[_tempCollectPos++] = _dhtSensor.readTemperature();
+
+		if (!_dhtSensor.read() && _isDHTSensorFound)
+		{
+			_isDHTSensorFound = false;
+			return;
+		}
+
+		if (checkSensorExist())
+		{
+			_tempCollection[_tempCollectPos++] = _dhtSensor.readTemperature();
+		}
 
 		// Set next time to read data.
 		_mesureTempTime = millis() + CHECK_HT_INTERVAL_MS;
 	}
+}
+
+/**
+* @brief Check if DHT sensor exist. It is implement plug and play functionality.
+* If can't find sensor switch device Off. If the sensor appears again, return device in a previous state.
+*/
+bool checkSensorExist()
+{
+	if (_dhtSensor.read())
+	{
+		_isDHTSensorFound = true;
+
+		if (_lastDeviceState != _deviceState)
+		{
+			_deviceState = _lastDeviceState;
+			publishData(CurrentDeviceState);
+		}
+
+		return true;
+	}
+
+	if (_isDHTSensorFound)
+	{
+		_isDHTSensorFound = false;
+		return false;
+	}
+
+	if (_deviceState == On)
+	{
+		_lastDeviceState = _deviceState;
+
+		// If sensor doesn't exist 2 time, switch device to Off.
+		_deviceState = Off;
+		publishData(CurrentDeviceState);
+	}
+
+	return false;
 }
 
 void processTemperature()
@@ -305,17 +357,21 @@ void setFanDegree(uint degree)
 		return;
 	}
 
-	// Switch relay off.
+	// Switch last fan degree relay off.
 	if (_fanDegree != 0)
 	{
 		KMPDinoWiFiESP.SetRelayState(_fanDegree - 1, false);
 	}
 
 	delay(100);
-	
-	KMPDinoWiFiESP.SetRelayState(_fanDegree - 1, true);
+
+	if (degree > 0)
+	{
+		KMPDinoWiFiESP.SetRelayState(degree - 1, true);
+	}
 
 	_fanDegree = degree;
+
 	publishData(FanDegree);
 }
 
@@ -394,15 +450,17 @@ void mqttPublish(const char* topic, char* payload)
 */
 void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length)
 {
-	DEBUG_PRINT(operationName);
-	DEBUG_PRINT(" topic [");
-	DEBUG_PRINT(topic);
-	DEBUG_PRINT("] payload [");
+#ifdef WIFIFCMM_DEBUG
+	DEBUG_FC_PRINT(operationName);
+	DEBUG_FC_PRINT(" topic [");
+	DEBUG_FC_PRINT(topic);
+	DEBUG_FC_PRINT("] payload [");
 	for (uint i = 0; i < length; i++)
 	{
-		DEBUG_PRINT((char)payload[i]);
+		DEBUG_FC_PRINT((char)payload[i]);
 	}
-	DEBUG_PRINTLN("]");
+	DEBUG_FC_PRINTLN("]");
+#endif
 }
 
 /**
@@ -414,9 +472,9 @@ bool connectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
 	{
-		DEBUG_PRINT("Reconnecting [");
-		DEBUG_PRINT(WiFi.SSID());
-		DEBUG_PRINTLN("]...");
+		DEBUG_FC_PRINT("Reconnecting [");
+		DEBUG_FC_PRINT(WiFi.SSID());
+		DEBUG_FC_PRINTLN("]...");
 
 		WiFi.begin();
 
@@ -425,8 +483,8 @@ bool connectWiFi()
 			return false;
 		}
 
-		DEBUG_PRINT("IP address: ");
-		DEBUG_PRINTLN(WiFi.localIP());
+		DEBUG_FC_PRINT("IP address: ");
+		DEBUG_FC_PRINTLN(WiFi.localIP());
 	}
 
 	return true;
@@ -441,24 +499,26 @@ bool connectMqtt()
 {
 	if (!_mqttClient.connected())
 	{
-		DEBUG_PRINTLN("Attempting MQTT connection...");
+		DEBUG_FC_PRINTLN("Attempting MQTT connection...");
 
 		if (_mqttClient.connect(_mqttClientId, _mqttUser, _mqttPass))
 		{
-			DEBUG_PRINTLN("Connected.");
+			DEBUG_FC_PRINTLN("MQTT connected. Subscribe for topics:");
 			// Subscribe for topics:
 			//  basetopic
 			_mqttClient.subscribe(_baseTopic);
-			
+			DEBUG_FC_PRINTLN(_baseTopic);
+
 			//  basetopic/+/set. This pattern include:  basetopic/mode/set, basetopic/desiredtemp/set, basetopic/state/set
-			strConcatenate(_topicBuff, 4, _baseTopic, TOPIC_SEPARATOR, EVERY_ONE_LEVEL_TOPIC, TOPIC_SET);
+			strConcatenate(_topicBuff, 5, _baseTopic, TOPIC_SEPARATOR, EVERY_ONE_LEVEL_TOPIC, TOPIC_SEPARATOR, TOPIC_SET);
 			_mqttClient.subscribe(_topicBuff);
+			DEBUG_FC_PRINTLN(_topicBuff);
 		}
 		else
 		{
-			DEBUG_PRINT("failed, rc=");
-			DEBUG_PRINT(_mqttClient.state());
-			DEBUG_PRINTLN(" try again after 5 seconds");
+			DEBUG_FC_PRINT("failed, rc=");
+			DEBUG_FC_PRINT(_mqttClient.state());
+			DEBUG_FC_PRINTLN(" try again after 5 seconds");
 			// Wait 5 seconds before retrying
 			delay(5000);
 		}
@@ -474,7 +534,7 @@ bool connectMqtt()
 */
 void saveConfigCallback()
 {
-	DEBUG_PRINTLN("Should save config");
+	DEBUG_FC_PRINTLN("Should save config");
 	_shouldSaveConfig = true;
 }
 
@@ -487,7 +547,7 @@ void saveConfigCallback()
 bool mangeConnectParamers(WiFiManager* wifiManager)
 {
 	//read configuration from FS json
-	DEBUG_PRINTLN("Mounting FS...");
+	DEBUG_FC_PRINTLN("Mounting FS...");
 
 	ReadConfiguration();
 
@@ -499,6 +559,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 	WiFiManagerParameter customClientName("clientName", "Client name", _mqttClientId, MQTT_CLIENT_ID_LEN);
 	WiFiManagerParameter customMqttUser("user", "MQTT user", _mqttUser, MQTT_USER_LEN);
 	WiFiManagerParameter customMqttPass("password", "MQTT pass", _mqttPass, MQTT_PASS_LEN);
+	WiFiManagerParameter customBaseTopic("baseTopic", "Main topic", _baseTopic, BASE_TOPIC_LEN);
 
 	// add all your parameters here
 	wifiManager->addParameter(&customMqttServer);
@@ -506,18 +567,19 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 	wifiManager->addParameter(&customClientName);
 	wifiManager->addParameter(&customMqttUser);
 	wifiManager->addParameter(&customMqttPass);
+	wifiManager->addParameter(&customBaseTopic);
 
 	// fetches ssid and pass from eeprom and tries to connect
 	// if it does not connect it starts an access point with the specified name
 	// auto generated name ESP + ChipID
 	if (!wifiManager->autoConnect())
 	{
-		DEBUG_PRINTLN("Doesn't connect.");
+		DEBUG_FC_PRINTLN("Doesn't connect.");
 		return false;
 	}
 
 	//if you get here you have connected to the WiFi
-	DEBUG_PRINTLN("Connected.");
+	DEBUG_FC_PRINTLN("Connected.");
 
 	if (_shouldSaveConfig)
 	{
@@ -527,6 +589,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager)
 		strcpy(_mqttClientId, customClientName.getValue());
 		strcpy(_mqttUser, customMqttUser.getValue());
 		strcpy(_mqttPass, customMqttPass.getValue());
+		strcpy(_baseTopic, customBaseTopic.getValue());
 
 		SaveConfiguration();
 	}
@@ -538,20 +601,20 @@ void ReadConfiguration()
 {
 	if (!SPIFFS.begin())
 	{
-		DEBUG_PRINTLN("Failed to mount FS");
+		DEBUG_FC_PRINTLN("Failed to mount FS");
 	}
 	else
 	{
-		DEBUG_PRINTLN("The file system is mounted.");
+		DEBUG_FC_PRINTLN("The file system is mounted.");
 
 		if (SPIFFS.exists(CONFIG_FILE_NAME))
 		{
 			//file exists, reading and loading
-			DEBUG_PRINTLN("Reading configuration file");
+			DEBUG_FC_PRINTLN("Reading configuration file");
 			File configFile = SPIFFS.open(CONFIG_FILE_NAME, "r");
 			if (configFile)
 			{
-				DEBUG_PRINTLN("Opening configuration file");
+				DEBUG_FC_PRINTLN("Opening configuration file");
 				size_t size = configFile.size();
 				// Allocate a buffer to store contents of the file.
 				std::unique_ptr<char[]> buf(new char[size]);
@@ -559,25 +622,26 @@ void ReadConfiguration()
 				configFile.readBytes(buf.get(), size);
 				DynamicJsonBuffer jsonBuffer;
 				JsonObject& json = jsonBuffer.parseObject(buf.get());
-#ifdef WIFIFCMM
-				json.printTo(DEBUG_PRINTER);
+#ifdef WIFIFCMM_DEBUG
+				json.printTo(DEBUG_FC);
 #endif
 				if (json.success())
 				{
-					DEBUG_PRINTLN("\nJson is parsed");
+					DEBUG_FC_PRINTLN("\nJson is parsed");
 
 					strcpy(_mqttServer, json[MQTT_SERVER_KEY]);
 					strcpy(_mqttPort, json[MQTT_PORT_KEY]);
 					strcpy(_mqttClientId, json[MQTT_CLIENT_ID_KEY]);
 					strcpy(_mqttUser, json[MQTT_USER_KEY]);
 					strcpy(_mqttPass, json[MQTT_PASS_KEY]);
+					strcpy(_baseTopic, json[BASE_TOPIC_KEY]);
 					// After start device we should set this settings.
 					//_mode = (Mode)atoi(json[MODE_KEY]);
 					//_deviceState = atoi(json[TOPIC_DEVICE_STATE]) == 1 ? On : Off;
 				}
 				else
 				{
-					DEBUG_PRINTLN("Loading json configuration is failed");
+					DEBUG_FC_PRINTLN("Loading json configuration is failed");
 				}
 			}
 		}
@@ -586,7 +650,7 @@ void ReadConfiguration()
 
 void SaveConfiguration()
 {
-	DEBUG_PRINTLN("Saving configuration...");
+	DEBUG_FC_PRINTLN("Saving configuration...");
 
 	DynamicJsonBuffer jsonBuffer;
 	JsonObject& json = jsonBuffer.createObject();
@@ -596,20 +660,24 @@ void SaveConfiguration()
 	json[MQTT_CLIENT_ID_KEY] = _mqttClientId;
 	json[MQTT_USER_KEY] = _mqttUser;
 	json[MQTT_PASS_KEY] = _mqttPass;
+	json[BASE_TOPIC_KEY] = _baseTopic;
 	// We shouldn't save this settings.
 	//json[MODE_KEY] = (int)_mode;
 	//json[TOPIC_DEVICE_STATE] = _deviceState == On ? 1 : 0;
 
 	File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
 	if (!configFile) {
-		DEBUG_PRINTLN("Failed to open a configuration file for writing.");
+		DEBUG_FC_PRINTLN("Failed to open a configuration file for writing.");
 	}
 	else
 	{
-		DEBUG_PRINTLN("Configuration is saved.");
+		DEBUG_FC_PRINTLN("Configuration is saved.");
 	}
 
-	json.prettyPrintTo(Serial);
+#ifdef WIFIFCMM_DEBUG
+	json.prettyPrintTo(DEBUG_FC);
+#endif
+
 	json.printTo(configFile);
 	configFile.close();
 }

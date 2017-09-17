@@ -166,12 +166,16 @@ void removeEnd(char *str, size_t n)
 	}
 
 	str[len - n] = '\0';
-	memmove(str, str + n, len - n + 1);
 }
 
 bool isEqual(const char *strFirst, const char *strSecond)
 {
 	return strcmp(strFirst, strSecond) == 0;
+}
+
+bool isEqual(const char *strFirst, const char *strSecond, size_t length)
+{
+	return strncmp(strFirst, strSecond, length) == 0;
 }
 
 float roundF(float f, uint8_t precision)
