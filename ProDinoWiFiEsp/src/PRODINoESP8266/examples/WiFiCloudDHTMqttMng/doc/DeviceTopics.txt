@@ -1,0 +1,11 @@
+topic:payload
+
+Callback:
+ kmp/prodinowifi:null - send all data per deveice
+ kmp/prodinowifi/relay/x/set:heat - set x relay state [ 0 | 1 ]
+ 
+Publish:
+ kmp/prodinowifi/relay/x:1 - a current relay state
+ kmp/prodinowifi/optoin/x:1 - a current optical input state
+ kmp/prodinowifi/temperature:24.0 - temperature
+ kmp/prodinowifi/humidity:44.2 - humidity

@@ -40,7 +40,7 @@ const char* MQTT_PORT_KEY = "mqttPort";
 const char* MQTT_CLIENT_ID_KEY = "mqttClientId";
 const char* MQTT_USER_KEY = "mqttUser";
 const char* MQTT_PASS_KEY = "mqttPass";
-const char* CONFIG_FILE_NAME = "/config.json";
+const char* CONFIG_FILE_NAME = "/wificlouddhtmqttmngconfig.json";
 
 const char* TOPIC_SEPARATOR = "/";
 const char* MAIN_TOPIC = "kmp/prodinowifi";
