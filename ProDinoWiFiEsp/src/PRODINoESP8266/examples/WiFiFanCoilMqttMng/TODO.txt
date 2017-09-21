@@ -1,5 +1,0 @@
-1. Set Heat / Cold
-2. Set temperature, base temperature BT
-3. Set On/Off
-4. Relay On/Off depend temperature
-5. Temperature levels. 0 - BT is reached, 1 +- 0,5 degree, 2 +- 1 degree, 3 +- 2 or more degrees
