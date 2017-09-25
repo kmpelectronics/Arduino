@@ -57,11 +57,12 @@ float _desiredTemperature = 22.0;
 float _currentTemperature = _desiredTemperature;
 
 float _tempCollection[TEMPERATURE_ARRAY_LEN];
+float _humidity;
 uint8_t _tempCollectPos = 0;
-// Store last measure time.
-unsigned long _mesureTempTime = 0;
-uint8_t _fanDegree = 0;
 
+// Store last time intervals. 0 -  measure Temp, 1 - ping
+unsigned long _timeIntervals[2] = { 0 };
+uint8_t _fanDegree = 0;
 
 /**
 * @brief Execute first after start the device. Initialize hardware.
@@ -88,13 +89,13 @@ void setup(void)
 	WiFiManager wifiManager;
 
 	// Is OptoIn 4 is On the board is resetting WiFi configuration.
-	if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
-	{
-		DEBUG_FC_PRINTLN("Resetting WiFi configuration...\r\n");
-		//reset saved settings
-		wifiManager.resetSettings();
-		DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
-	}
+	//if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
+	//{
+	//	DEBUG_FC_PRINTLN("Resetting WiFi configuration...\r\n");
+	//	//reset saved settings
+	//	wifiManager.resetSettings();
+	//	DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
+	//}
 
 	// Set save configuration callback.
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -134,8 +135,9 @@ void loop(void)
 
 	_mqttClient.loop();
 	
-	collectTemperature();
+	collectTemperatureAndHumidity();
 	processTemperature();
+	
 	fanCoilControl();
 }
 
@@ -158,7 +160,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	// Processing basetopic - command send all data from device.
 	if (strlen(topic) == baseTopicLen && length == 0)
 	{
-		DeviceData deviceData = (DeviceData)(CurrentTemp | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState );
+		DeviceData deviceData = (DeviceData)(0b11111111);
 		publishData(deviceData);
 		return;
 	}
@@ -231,29 +233,28 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	}
 }
 
-void collectTemperature()
+void collectTemperatureAndHumidity()
 {
-	if (millis() > _mesureTempTime)
+	if (millis() > _timeIntervals[0])
 	{
 		if (_tempCollectPos >= TEMPERATURE_ARRAY_LEN)
 		{
 			_tempCollectPos = 0;
 		}
 
-
-		if (!_dhtSensor.read() && _isDHTSensorFound)
-		{
-			_isDHTSensorFound = false;
-			return;
-		}
-
 		if (checkSensorExist())
 		{
 			_tempCollection[_tempCollectPos++] = _dhtSensor.readTemperature();
+			float currentHumidity = _dhtSensor.readHumidity();
+			if (currentHumidity != _humidity)
+			{
+				_humidity = currentHumidity;
+				publishData(CurrentHumidity);
+			}
 		}
 
 		// Set next time to read data.
-		_mesureTempTime = millis() + CHECK_HT_INTERVAL_MS;
+		_timeIntervals[0] = millis() + CHECK_HT_INTERVAL_MS;
 	}
 }
 
@@ -276,6 +277,7 @@ bool checkSensorExist()
 		return true;
 	}
 
+	// Check two times.
 	if (_isDHTSensorFound)
 	{
 		_isDHTSensorFound = false;
@@ -380,9 +382,8 @@ void publishData(DeviceData deviceData)
 	if (CHECK_ENUM(deviceData, CurrentTemp))
 	{
 		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
-		FloatToChars(_currentTemperature, TEMPERATURE_PRECISION, _payloadBuff);
 
-		mqttPublish(_topicBuff, _payloadBuff);
+		mqttPublish(_topicBuff, sensorValue(_currentTemperature));
 	}
 
 	if (CHECK_ENUM(deviceData, FanDegree))
@@ -423,6 +424,24 @@ void publishData(DeviceData deviceData)
 	{
 		mqttPublish(_baseTopic, (char*)PAYLOAD_STARTED);
 	}
+
+	if (CHECK_ENUM(deviceData, CurrentHumidity))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
+
+		mqttPublish(_topicBuff, sensorValue(_humidity));
+	}
+}
+
+char* sensorValue(float value)
+{
+	if (_isDHTSensorFound)
+	{
+		FloatToChars(_currentTemperature, TEMPERATURE_PRECISION, _payloadBuff);
+		return _payloadBuff;
+	}
+
+	return (char*) NOT_AVILABLE;
 }
 
 /**

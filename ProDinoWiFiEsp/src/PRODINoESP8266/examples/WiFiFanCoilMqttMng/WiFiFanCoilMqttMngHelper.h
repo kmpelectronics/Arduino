@@ -30,7 +30,9 @@ const uint8_t MQTT_PASS_LEN = 16;
 const uint8_t BASE_TOPIC_LEN = 32;
 const uint8_t TEMPERATURE_ARRAY_LEN = 10;
 const uint8_t TEMPERATURE_PRECISION = 1;
+
 const long CHECK_HT_INTERVAL_MS = 5000;
+const long PING_INTERVAL_MS = 30000;
 
 const char* MQTT_SERVER_KEY = "mqttServer";
 const char* MQTT_PORT_KEY = "mqttPort";
@@ -56,6 +58,7 @@ const char* TOPIC_FAN_DEGREE = "fandegree";
 const char* PAYLOAD_STARTED = "started";
 
 const char* EVERY_ONE_LEVEL_TOPIC = "+";
+const char* NOT_AVILABLE = "N/A";
 
 const float FAN_SWITCH_LEVEL[FAN_SWITCH_LEVEL_LEN] = { 0, 0.5, 1.0 };
 
@@ -81,7 +84,8 @@ enum DeviceData
 	FanDegree = 4,
 	CurrentMode = 8,
 	CurrentDeviceState = 16,
-	DeviceIsStarted = 32
+	DeviceIsStarted = 32,
+	CurrentHumidity = 64
 };
 
 #endif

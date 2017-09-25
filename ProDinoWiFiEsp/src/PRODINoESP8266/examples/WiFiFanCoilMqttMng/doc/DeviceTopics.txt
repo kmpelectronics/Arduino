@@ -8,7 +8,8 @@ Callback:
 
 Publish:
  basetopic/currenttemp:23.5 - current measured temperature
- basetopic/fandegree:2 - a current fan degree. Gegrees: 0 - stopped, 1 - low fan speed, 2 - medium, 3 - high
+ basetopic/humidity:48.2 - current measured humidity
+ basetopic/fandegree:2 - a current fan speed degree. Degrees: 0 - stopped, 1 - low, 2 - medium, 3 - high
  basetopic/desiredtemp:24.0 - desired temperature
  basetopic/mode:heat - current device mode
  basetopic/state:on - current device state
