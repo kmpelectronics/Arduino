@@ -38,8 +38,6 @@ char _baseTopic[BASE_TOPIC_LEN] = "flat/bedroom1";
 WiFiClient _wifiClient;
 PubSubClient _mqttClient;
 DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
-// Contains last measured humidity and temperature from the sensor.
-float _dht[2];
 
 // Text buffers for topic and payload.
 char _topicBuff[128];
@@ -54,7 +52,7 @@ DeviceState _deviceState = Off;
 DeviceState _lastDeviceState;
 
 float _desiredTemperature = 22.0;
-float _currentTemperature = _desiredTemperature;
+float _currentTemperature;
 
 float _tempCollection[TEMPERATURE_ARRAY_LEN];
 float _humidity;

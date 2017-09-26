@@ -1,7 +1,11 @@
+Legend
 topic:payload
 
+------------------------
+--- A device topics: ---
+------------------------
 Callback:
- kmp/prodinowifi:null - send all data per device
+ kmp/prodinowifi: - send all data per device
  kmp/prodinowifi/relay/x/set:1 - set [x] (0..3) relay state. Values: [ 0 | 1 ]
  
 Publish:
@@ -9,3 +13,24 @@ Publish:
  kmp/prodinowifi/optoin/x:1 - [x] (0..3) optical input state [0 | 1]
  kmp/prodinowifi/temperature:24.0 - temperature
  kmp/prodinowifi/humidity:44.2 - humidity
+ 
+----------------------------
+--- A client application ---
+----------------------------
+Subscribe for these topics:
+ kmp/prodinowifi/relay/0:1 - Fist relay state [0 | 1]
+ kmp/prodinowifi/relay/1:0 - Second relay state [0 | 1]
+ kmp/prodinowifi/relay/2:1 - Third relay state [0 | 1]
+ kmp/prodinowifi/relay/3:1 - Fourth relay state [0 | 1]
+ kmp/prodinowifi/optoin/0:1 - First optical input state [0 | 1]
+ kmp/prodinowifi/optoin/1:0 - Second optical input state [0 | 1]
+ kmp/prodinowifi/optoin/2:1 - Third optical input state [0 | 1]
+ kmp/prodinowifi/optoin/3:0 - Fourth optical input state [0 | 1]
+ kmp/prodinowifi/temperature:24.0 - Current temperature
+ kmp/prodinowifi/humidity:44.2 - Current humidity
+Publish these topics:
+ kmp/prodinowifi: - send all data per device
+ kmp/prodinowifi/relay/0/set:1 - Set first relay state. Values: [ 0 | 1 ]
+ kmp/prodinowifi/relay/1/set:0 - Set second relay state. Values: [ 0 | 1 ]
+ kmp/prodinowifi/relay/2/set:1 - Set third relay state. Values: [ 0 | 1 ]
+ kmp/prodinowifi/relay/3/set:0 - Set fourth relay state. Values: [ 0 | 1 ]

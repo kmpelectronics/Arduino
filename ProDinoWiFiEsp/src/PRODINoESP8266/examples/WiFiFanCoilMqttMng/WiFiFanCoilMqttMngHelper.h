@@ -88,5 +88,7 @@ enum DeviceData
 	CurrentHumidity = 64
 };
 
+void test();
+
 #endif
 
