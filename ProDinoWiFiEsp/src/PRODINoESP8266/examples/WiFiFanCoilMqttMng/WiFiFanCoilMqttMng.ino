@@ -13,8 +13,9 @@
 // Attention: The project has not finished yet!
 
 #include <FS.h>
+#include "FanCoilHelper.h"
 #include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
-#include <KMPCommon.h>
+#include "KMPCommon.h"
 #include <ESP8266WiFi.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,6 @@
 
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
-#include "WiFiFanCoilMqttMngHelper.h"
 #include <PubSubClient.h>         // Install with Library Manager. "PubSubClient by Nick O'Leary" https://pubsubclient.knolleary.net/
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
@@ -44,8 +44,7 @@ char _topicBuff[128];
 char _payloadBuff[32];
 
 bool _shouldSaveConfig = false;
-bool _initialSendData = true;
-bool _isDHTSensorFound = true;
+bool _isSensorExist = true;
 
 Mode _mode = Cold;
 DeviceState _deviceState = Off;
@@ -53,14 +52,38 @@ DeviceState _lastDeviceState;
 
 float _desiredTemperature = 22.0;
 float _currentTemperature;
-
+float _averageTemperature;
 float _tempCollection[TEMPERATURE_ARRAY_LEN];
-float _humidity;
 uint8_t _tempCollectPos = 0;
+unsigned long _checkTempInterval;
+
+float _currentHumidity;
+float _averageHumidity;
+float _humidityCollection[HUMIDITY_ARRAY_LEN];
+uint8_t _humidityCollectPos = 0;
+unsigned long _checkHumidityInterval;
+
+unsigned long _checkPingInterval;
 
 // Store last time intervals. 0 -  measure Temp, 1 - ping
-unsigned long _timeIntervals[2] = { 0 };
 uint8_t _fanDegree = 0;
+
+bool _deviceIsConnected = false;
+
+bool getTemperatureAndHumidity(bool processStatus = true)
+{
+	_currentTemperature = _dhtSensor.readTemperature();
+	_currentHumidity = _dhtSensor.readHumidity();
+
+	bool result = _currentHumidity != NAN && _currentTemperature != NAN;
+
+	if (processStatus)
+	{
+		processDeviceStatus(result);
+	}
+
+	return result;
+}
 
 /**
 * @brief Execute first after start the device. Initialize hardware.
@@ -75,12 +98,7 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 	KMPDinoWiFiESP.SetAllRelaysOff();
 
-	DEBUG_FC_PRINTLN("KMP fan coil management with Mqtt.\r\n");
-
-	for (size_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
-	{
-		_tempCollection[i] = _desiredTemperature;
-	}
+	DEBUG_FC_PRINTLN(F("KMP fan coil management with Mqtt.\r\n"));
 
 	//WiFiManager
 	//Local initialization. Once it's business is done, there is no need to keep it around.
@@ -103,11 +121,94 @@ void setup(void)
 		return;
 	}
 
+	_dhtSensor.begin();
+
+	// Initialize arrays.
+	if (getTemperatureAndHumidity(false))
+	{
+		for (size_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
+		{
+			_tempCollection[i] = _currentTemperature;
+		}
+
+		for (size_t i = 0; i < HUMIDITY_ARRAY_LEN; i++)
+		{
+			_humidityCollection[i] = _currentHumidity;
+		}
+	}
+
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
 	uint16_t port = atoi(_mqttPort);
 	_mqttClient.setServer(_mqttServer, port);
 	_mqttClient.setCallback(callback);
+}
+
+void publishData(DeviceData deviceData, bool sendCurrent = false)
+{
+	if (CHECK_ENUM(deviceData, Temperature))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
+
+		float val = sendCurrent ? _currentTemperature : _averageTemperature;
+
+		mqttPublish(_topicBuff, floatToStr(val, TEMPERATURE_PRECISION));
+	}
+
+	if (CHECK_ENUM(deviceData, Humidity))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
+
+		float val = sendCurrent ? _currentHumidity : _averageHumidity;
+
+		mqttPublish(_topicBuff, floatToStr(val, HUMIDITY_PRECISION));
+	}
+
+	if (CHECK_ENUM(deviceData, FanDegree))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_FAN_DEGREE);
+		IntToChars(_fanDegree, _payloadBuff);
+
+		mqttPublish(_topicBuff, _payloadBuff);
+	}
+
+	if (CHECK_ENUM(deviceData, DesiredTemp))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DESIRED_TEMPERATURE);
+		FloatToChars(_desiredTemperature, TEMPERATURE_PRECISION, _payloadBuff);
+
+		mqttPublish(_topicBuff, _payloadBuff);
+	}
+
+	if (CHECK_ENUM(deviceData, CurrentMode))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_MODE);
+
+		const char * mode = _mode == Cold ? PAYLOAD_COLD : PAYLOAD_HEAT;
+
+		mqttPublish(_topicBuff, (char*)mode);
+	}
+
+	if (CHECK_ENUM(deviceData, CurrentDeviceState))
+	{
+		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DEVICE_STATE);
+
+		const char * mode = _deviceState == On ? PAYLOAD_ON : PAYLOAD_OFF;
+
+		mqttPublish(_topicBuff, (char*)mode);
+	}
+
+	if (CHECK_ENUM(deviceData, DeviceIsReady))
+	{
+		mqttPublish(_baseTopic, (char*)PAYLOAD_READY);
+	}
+
+	if (CHECK_ENUM(deviceData, DevicePing))
+	{
+		mqttPublish(_baseTopic, (char*)PAYLOAD_PING);
+	}
+
+	_checkPingInterval = millis() + PING_INTERVAL_MS;
 }
 
 /**
@@ -117,26 +218,30 @@ void setup(void)
 */
 void loop(void)
 {
-	// By the normal device work need connected with WiFi and MQTT server.
-	if (!connectWiFi() || !connectMqtt())
+	// For a normal work on device, need it be connected to WiFi and MQTT server.
+	bool isConnected = connectWiFi() && connectMqtt();
+
+	processConnectionStatus(isConnected);
+
+	if (!isConnected)
 	{
 		return;
 	}
 
-	// Publish information into MQTT.
-	if (_initialSendData)
-	{
-		DeviceData deviceData = (DeviceData)(CurrentTemp | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | DeviceIsStarted);
-		publishData(deviceData);
-		_initialSendData = false;
-	}
-
 	_mqttClient.loop();
 	
-	collectTemperatureAndHumidity();
+	collectTemperature();
 	processTemperature();
-	
+
+	collectHumidity();
+	processHumidity();
+
 	fanCoilControl();
+
+	if (millis() > _checkPingInterval)
+	{
+		publishData(DevicePing);
+	}
 }
 
 /**
@@ -145,8 +250,9 @@ void loop(void)
 * @return void
 */
 void callback(char* topic, byte* payload, unsigned int length) {
-
+#ifdef WIFIFCMM_DEBUG
 	printTopicAndPayload("Call back", topic, (char*)payload, length);
+#endif
 
 	size_t baseTopicLen = strlen(_baseTopic);
 
@@ -155,11 +261,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
 		return;
 	}
 
-	// Processing basetopic - command send all data from device.
+	// Processing base topic - command send all data from device.
 	if (strlen(topic) == baseTopicLen && length == 0)
 	{
-		DeviceData deviceData = (DeviceData)(0b11111111);
-		publishData(deviceData);
+		DeviceData deviceData = (DeviceData)(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity);
+		publishData(deviceData, true);
 		return;
 	}
 
@@ -231,40 +337,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	}
 }
 
-void collectTemperatureAndHumidity()
-{
-	if (millis() > _timeIntervals[0])
-	{
-		if (_tempCollectPos >= TEMPERATURE_ARRAY_LEN)
-		{
-			_tempCollectPos = 0;
-		}
-
-		if (checkSensorExist())
-		{
-			_tempCollection[_tempCollectPos++] = _dhtSensor.readTemperature();
-			float currentHumidity = _dhtSensor.readHumidity();
-			if (currentHumidity != _humidity)
-			{
-				_humidity = currentHumidity;
-				publishData(CurrentHumidity);
-			}
-		}
-
-		// Set next time to read data.
-		_timeIntervals[0] = millis() + CHECK_HT_INTERVAL_MS;
-	}
-}
-
 /**
 * @brief Check if DHT sensor exist. It is implement plug and play functionality.
 * If can't find sensor switch device Off. If the sensor appears again, return device in a previous state.
 */
-bool checkSensorExist()
+void processDeviceStatus(bool isSensorExist)
 {
-	if (_dhtSensor.read())
+	if (isSensorExist)
 	{
-		_isDHTSensorFound = true;
+		_isSensorExist = true;
 
 		if (_lastDeviceState != _deviceState)
 		{
@@ -272,45 +353,108 @@ bool checkSensorExist()
 			publishData(CurrentDeviceState);
 		}
 
-		return true;
+		return;
 	}
 
 	// Check two times.
-	if (_isDHTSensorFound)
+	if (_isSensorExist)
 	{
-		_isDHTSensorFound = false;
-		return false;
+		_isSensorExist = false;
+		return;
 	}
 
 	if (_deviceState == On)
 	{
-		_lastDeviceState = _deviceState;
+		_lastDeviceState = On;
 
 		// If sensor doesn't exist 2 time, switch device to Off.
 		_deviceState = Off;
 		publishData(CurrentDeviceState);
 	}
+}
 
-	return false;
+void processConnectionStatus(bool isConnected)
+{
+	if (isConnected)
+	{
+		if (_deviceIsConnected != isConnected)
+		{
+			_deviceIsConnected = isConnected;
+			publishData((DeviceData)(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity | DeviceIsReady));
+		}
+		
+		return;
+	}
+
+	_deviceIsConnected = false;
+
+	if (_deviceState == On)
+	{
+		_deviceState = Off;
+
+		// Switch off fan.
+		setFanDegree(0);
+	}
+}
+
+
+void collectTemperature()
+{
+	if (millis() > _checkTempInterval)
+	{
+		if (_tempCollectPos >= TEMPERATURE_ARRAY_LEN)
+		{
+			_tempCollectPos = 0;
+		}
+
+		if (_isSensorExist)
+		{
+			_tempCollection[_tempCollectPos++] = roundF(_currentTemperature, TEMPERATURE_PRECISION);
+		}
+
+		// Set next time to read data.
+		_checkTempInterval = millis() + CHECK_TEMP_INTERVAL_MS;
+	}
+}
+
+void collectHumidity()
+{
+	if (millis() > _checkHumidityInterval)
+	{
+		if (_humidityCollectPos >= HUMIDITY_ARRAY_LEN)
+		{
+			_humidityCollectPos = 0;
+		}
+
+		if (_isSensorExist)
+		{
+			_humidityCollection[_humidityCollectPos++] = roundF(_currentHumidity, HUMIDITY_PRECISION);
+		}
+
+		// Set next time to read data.
+		_checkHumidityInterval = millis() + CHECK_HUMIDITY_INTERVAL_MS;
+	}
 }
 
 void processTemperature()
 {
-	// Get average value.
-	double temp = 0.0;
-	for (uint8_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
+	float result = calcAverage(_tempCollection, TEMPERATURE_ARRAY_LEN, TEMPERATURE_PRECISION);
+
+	if (_averageTemperature != result)
 	{
-		temp += _tempCollection[i];
+		_averageTemperature = result;
+		publishData(Temperature);
 	}
+}
 
-	temp /= TEMPERATURE_ARRAY_LEN;
+void processHumidity()
+{
+	float result = calcAverage(_humidityCollection, HUMIDITY_ARRAY_LEN, HUMIDITY_PRECISION);
 
-	temp = roundF(temp, TEMPERATURE_PRECISION);
-
-	if (_currentTemperature != temp)
+	if (_averageHumidity != result)
 	{
-		_currentTemperature = temp;
-		publishData(CurrentTemp);
+		_averageHumidity = result;
+		publishData(Humidity);
 	}
 }
 
@@ -375,67 +519,11 @@ void setFanDegree(uint degree)
 	publishData(FanDegree);
 }
 
-void publishData(DeviceData deviceData)
+char* floatToStr(float value, uint precision)
 {
-	if (CHECK_ENUM(deviceData, CurrentTemp))
+	if (_isSensorExist)
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
-
-		mqttPublish(_topicBuff, sensorValue(_currentTemperature));
-	}
-
-	if (CHECK_ENUM(deviceData, FanDegree))
-	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_FAN_DEGREE);
-		IntToChars(_fanDegree, _payloadBuff);
-
-		mqttPublish(_topicBuff, _payloadBuff);
-	}
-
-	if (CHECK_ENUM(deviceData, DesiredTemp))
-	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DESIRED_TEMPERATURE);
-		FloatToChars(_desiredTemperature, TEMPERATURE_PRECISION, _payloadBuff);
-
-		mqttPublish(_topicBuff, _payloadBuff);
-	}
-
-	if (CHECK_ENUM(deviceData, CurrentMode))
-	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_MODE);
-
-		const char * mode = _mode == Cold ? PAYLOAD_COLD : PAYLOAD_HEAT;
-
-		mqttPublish(_topicBuff, (char*)mode);
-	}
-
-	if (CHECK_ENUM(deviceData, CurrentDeviceState))
-	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DEVICE_STATE);
-
-		const char * mode = _deviceState == On ? PAYLOAD_ON : PAYLOAD_OFF;
-
-		mqttPublish(_topicBuff, (char*)mode);
-	}
-
-	if (CHECK_ENUM(deviceData, DeviceIsStarted))
-	{
-		mqttPublish(_baseTopic, (char*)PAYLOAD_STARTED);
-	}
-
-	if (CHECK_ENUM(deviceData, CurrentHumidity))
-	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
-
-		mqttPublish(_topicBuff, sensorValue(_humidity));
-	}
-}
-
-char* sensorValue(float value)
-{
-	if (_isDHTSensorFound)
-	{
-		FloatToChars(_currentTemperature, TEMPERATURE_PRECISION, _payloadBuff);
+		FloatToChars(_currentTemperature, precision, _payloadBuff);
 		return _payloadBuff;
 	}
 
@@ -451,33 +539,10 @@ char* sensorValue(float value)
 */
 void mqttPublish(const char* topic, char* payload)
 {
-	printTopicAndPayload("Publish", topic, payload, strlen(payload));
-	
-	_mqttClient.publish(topic, (const char*)payload);
-}
-
-/**
-* @brief Print debug information about topic and payload.
-* @operationName Operation which use this data.
-* @param topic The topic name.
-* @param payload The payload data.
-* @param length A payload length.
-*
-* @return void
-*/
-void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length)
-{
 #ifdef WIFIFCMM_DEBUG
-	DEBUG_FC_PRINT(operationName);
-	DEBUG_FC_PRINT(" topic [");
-	DEBUG_FC_PRINT(topic);
-	DEBUG_FC_PRINT("] payload [");
-	for (uint i = 0; i < length; i++)
-	{
-		DEBUG_FC_PRINT((char)payload[i]);
-	}
-	DEBUG_FC_PRINTLN("]");
+	printTopicAndPayload("Publish", topic, payload, strlen(payload));
 #endif
+	_mqttClient.publish(topic, (const char*)payload);
 }
 
 /**
@@ -489,9 +554,9 @@ bool connectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
 	{
-		DEBUG_FC_PRINT("Reconnecting [");
+		DEBUG_FC_PRINT(F("Reconnecting ["));
 		DEBUG_FC_PRINT(WiFi.SSID());
-		DEBUG_FC_PRINTLN("]...");
+		DEBUG_FC_PRINTLN(F("]..."));
 
 		WiFi.begin();
 
@@ -500,7 +565,7 @@ bool connectWiFi()
 			return false;
 		}
 
-		DEBUG_FC_PRINT("IP address: ");
+		DEBUG_FC_PRINT(F("IP address: "));
 		DEBUG_FC_PRINTLN(WiFi.localIP());
 	}
 
@@ -516,11 +581,11 @@ bool connectMqtt()
 {
 	if (!_mqttClient.connected())
 	{
-		DEBUG_FC_PRINTLN("Attempting MQTT connection...");
+		DEBUG_FC_PRINTLN(F("Attempting MQTT connection..."));
 
 		if (_mqttClient.connect(_mqttClientId, _mqttUser, _mqttPass))
 		{
-			DEBUG_FC_PRINTLN("MQTT connected. Subscribe for topics:");
+			DEBUG_FC_PRINTLN(F("MQTT connected. Subscribe for topics:"));
 			// Subscribe for topics:
 			//  basetopic
 			_mqttClient.subscribe(_baseTopic);
@@ -533,9 +598,9 @@ bool connectMqtt()
 		}
 		else
 		{
-			DEBUG_FC_PRINT("failed, rc=");
+			DEBUG_FC_PRINT(F("failed, rc="));
 			DEBUG_FC_PRINT(_mqttClient.state());
-			DEBUG_FC_PRINTLN(" try again after 5 seconds");
+			DEBUG_FC_PRINTLN(F(" try again after 5 seconds"));
 			// Wait 5 seconds before retrying
 			delay(5000);
 		}
@@ -658,7 +723,7 @@ void ReadConfiguration()
 				}
 				else
 				{
-					DEBUG_FC_PRINTLN("Loading json configuration is failed");
+					DEBUG_FC_PRINTLN(F("Loading json configuration is failed"));
 				}
 			}
 		}
@@ -667,7 +732,7 @@ void ReadConfiguration()
 
 void SaveConfiguration()
 {
-	DEBUG_FC_PRINTLN("Saving configuration...");
+	DEBUG_FC_PRINTLN(F("Saving configuration..."));
 
 	DynamicJsonBuffer jsonBuffer;
 	JsonObject& json = jsonBuffer.createObject();
@@ -684,11 +749,11 @@ void SaveConfiguration()
 
 	File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
 	if (!configFile) {
-		DEBUG_FC_PRINTLN("Failed to open a configuration file for writing.");
+		DEBUG_FC_PRINTLN(F("Failed to open a configuration file for writing."));
 	}
 	else
 	{
-		DEBUG_FC_PRINTLN("Configuration is saved.");
+		DEBUG_FC_PRINTLN(F("Configuration is saved."));
 	}
 
 #ifdef WIFIFCMM_DEBUG
