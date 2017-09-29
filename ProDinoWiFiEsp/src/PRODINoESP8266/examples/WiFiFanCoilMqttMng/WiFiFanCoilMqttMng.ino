@@ -6,13 +6,13 @@
 // Description:
 // Example link: 
 // Prerequisites: 
-//    You should install libraries described in #include section below.
+//    You should install following libraries:
+//		Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
 // Version: 0.0.1
 // Date: 13.09.2017
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // Attention: The project has not finished yet!
 
-#include <FS.h>
 #include "FanCoilHelper.h"
 #include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
 #include "KMPCommon.h"
@@ -26,14 +26,8 @@
 #include <PubSubClient.h>         // Install with Library Manager. "PubSubClient by Nick O'Leary" https://pubsubclient.knolleary.net/
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
-#include <ArduinoJson.h>          // Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
 
-char _mqttServer[MQTT_SERVER_LEN] = "x.cloudmqtt.com";
-char _mqttPort[MQTT_PORT_LEN] = "1883";
-char _mqttClientId[MQTT_CLIENT_ID_LEN] = "ESP8266Client";
-char _mqttUser[MQTT_USER_LEN];
-char _mqttPass[MQTT_PASS_LEN];
-char _baseTopic[BASE_TOPIC_LEN] = "flat/bedroom1";
+DeviceSettings _settings;
 
 WiFiClient _wifiClient;
 PubSubClient _mqttClient;
@@ -43,7 +37,6 @@ DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
 char _topicBuff[128];
 char _payloadBuff[32];
 
-bool _shouldSaveConfig = false;
 bool _isSensorExist = true;
 
 Mode _mode = Cold;
@@ -105,18 +98,18 @@ void setup(void)
 	WiFiManager wifiManager;
 
 	// Is OptoIn 4 is On the board is resetting WiFi configuration.
-	//if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
-	//{
-	//	DEBUG_FC_PRINTLN("Resetting WiFi configuration...\r\n");
-	//	//reset saved settings
-	//	wifiManager.resetSettings();
-	//	DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
-	//}
+	if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
+	{
+		DEBUG_FC_PRINTLN("Resetting WiFi configuration...\r\n");
+		//reset saved settings
+		wifiManager.resetSettings();
+		DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
+	}
 
 	// Set save configuration callback.
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
-
-	if (!mangeConnectParamers(&wifiManager))
+	
+	if (!mangeConnectParamers(&wifiManager, &_settings))
 	{
 		return;
 	}
@@ -139,8 +132,8 @@ void setup(void)
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
-	uint16_t port = atoi(_mqttPort);
-	_mqttClient.setServer(_mqttServer, port);
+	uint16_t port = atoi(_settings.MqttPort);
+	_mqttClient.setServer(_settings.MqttServer, port);
 	_mqttClient.setCallback(callback);
 }
 
@@ -148,7 +141,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 {
 	if (CHECK_ENUM(deviceData, Temperature))
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
 
 		float val = sendCurrent ? _currentTemperature : _averageTemperature;
 
@@ -157,7 +150,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 
 	if (CHECK_ENUM(deviceData, Humidity))
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
 
 		float val = sendCurrent ? _currentHumidity : _averageHumidity;
 
@@ -166,7 +159,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 
 	if (CHECK_ENUM(deviceData, FanDegree))
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_FAN_DEGREE);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_FAN_DEGREE);
 		IntToChars(_fanDegree, _payloadBuff);
 
 		mqttPublish(_topicBuff, _payloadBuff);
@@ -174,7 +167,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 
 	if (CHECK_ENUM(deviceData, DesiredTemp))
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DESIRED_TEMPERATURE);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_DESIRED_TEMPERATURE);
 		FloatToChars(_desiredTemperature, TEMPERATURE_PRECISION, _payloadBuff);
 
 		mqttPublish(_topicBuff, _payloadBuff);
@@ -182,7 +175,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 
 	if (CHECK_ENUM(deviceData, CurrentMode))
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_MODE);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_MODE);
 
 		const char * mode = _mode == Cold ? PAYLOAD_COLD : PAYLOAD_HEAT;
 
@@ -191,7 +184,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 
 	if (CHECK_ENUM(deviceData, CurrentDeviceState))
 	{
-		strConcatenate(_topicBuff, 3, _baseTopic, TOPIC_SEPARATOR, TOPIC_DEVICE_STATE);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_DEVICE_STATE);
 
 		const char * mode = _deviceState == On ? PAYLOAD_ON : PAYLOAD_OFF;
 
@@ -200,12 +193,12 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 
 	if (CHECK_ENUM(deviceData, DeviceIsReady))
 	{
-		mqttPublish(_baseTopic, (char*)PAYLOAD_READY);
+		mqttPublish(_settings.BaseTopic, (char*)PAYLOAD_READY);
 	}
 
 	if (CHECK_ENUM(deviceData, DevicePing))
 	{
-		mqttPublish(_baseTopic, (char*)PAYLOAD_PING);
+		mqttPublish(_settings.BaseTopic, (char*)PAYLOAD_PING);
 	}
 
 	_checkPingInterval = millis() + PING_INTERVAL_MS;
@@ -254,9 +247,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	printTopicAndPayload("Call back", topic, (char*)payload, length);
 #endif
 
-	size_t baseTopicLen = strlen(_baseTopic);
+	size_t baseTopicLen = strlen(_settings.BaseTopic);
 
-	if (!startsWith(topic, _baseTopic))
+	if (!startsWith(topic, _settings.BaseTopic))
 	{
 		return;
 	}
@@ -523,7 +516,7 @@ char* floatToStr(float value, uint precision)
 {
 	if (_isSensorExist)
 	{
-		FloatToChars(_currentTemperature, precision, _payloadBuff);
+		FloatToChars(value, precision, _payloadBuff);
 		return _payloadBuff;
 	}
 
@@ -583,16 +576,16 @@ bool connectMqtt()
 	{
 		DEBUG_FC_PRINTLN(F("Attempting MQTT connection..."));
 
-		if (_mqttClient.connect(_mqttClientId, _mqttUser, _mqttPass))
+		if (_mqttClient.connect(_settings.MqttClientId, _settings.MqttUser, _settings.MqttPass))
 		{
 			DEBUG_FC_PRINTLN(F("MQTT connected. Subscribe for topics:"));
 			// Subscribe for topics:
 			//  basetopic
-			_mqttClient.subscribe(_baseTopic);
-			DEBUG_FC_PRINTLN(_baseTopic);
+			_mqttClient.subscribe(_settings.BaseTopic);
+			DEBUG_FC_PRINTLN(_settings.BaseTopic);
 
 			//  basetopic/+/set. This pattern include:  basetopic/mode/set, basetopic/desiredtemp/set, basetopic/state/set
-			strConcatenate(_topicBuff, 5, _baseTopic, TOPIC_SEPARATOR, EVERY_ONE_LEVEL_TOPIC, TOPIC_SEPARATOR, TOPIC_SET);
+			strConcatenate(_topicBuff, 5, _settings.BaseTopic, TOPIC_SEPARATOR, EVERY_ONE_LEVEL_TOPIC, TOPIC_SEPARATOR, TOPIC_SET);
 			_mqttClient.subscribe(_topicBuff);
 			DEBUG_FC_PRINTLN(_topicBuff);
 		}
@@ -607,159 +600,4 @@ bool connectMqtt()
 	}
 
 	return _mqttClient.connected();
-}
-
-/**
-* @brief Callback notifying us of the need to save configuration set from WiFiManager.
-*
-* @return void.
-*/
-void saveConfigCallback()
-{
-	DEBUG_FC_PRINTLN("Should save config");
-	_shouldSaveConfig = true;
-}
-
-/**
-* @brief Setting information for connect WiFi and MQTT server. After successful connected this method save them.
-* @param wifiManager.
-*
-* @return bool if successful connected - true else false.
-*/
-bool mangeConnectParamers(WiFiManager* wifiManager)
-{
-	//read configuration from FS json
-	DEBUG_FC_PRINTLN("Mounting FS...");
-
-	ReadConfiguration();
-
-	// The extra parameters to be configured (can be either global or just in the setup)
-	// After connecting, parameter.getValue() will get you the configured value
-	// id/name placeholder/prompt default length
-	WiFiManagerParameter customMqttServer("server", "MQTT server", _mqttServer, MQTT_SERVER_LEN);
-	WiFiManagerParameter customMqttPort("port", "MQTT port", String(_mqttPort).c_str(), MQTT_PORT_LEN);
-	WiFiManagerParameter customClientName("clientName", "Client name", _mqttClientId, MQTT_CLIENT_ID_LEN);
-	WiFiManagerParameter customMqttUser("user", "MQTT user", _mqttUser, MQTT_USER_LEN);
-	WiFiManagerParameter customMqttPass("password", "MQTT pass", _mqttPass, MQTT_PASS_LEN);
-	WiFiManagerParameter customBaseTopic("baseTopic", "Main topic", _baseTopic, BASE_TOPIC_LEN);
-
-	// add all your parameters here
-	wifiManager->addParameter(&customMqttServer);
-	wifiManager->addParameter(&customMqttPort);
-	wifiManager->addParameter(&customClientName);
-	wifiManager->addParameter(&customMqttUser);
-	wifiManager->addParameter(&customMqttPass);
-	wifiManager->addParameter(&customBaseTopic);
-
-	// fetches ssid and pass from eeprom and tries to connect
-	// if it does not connect it starts an access point with the specified name
-	// auto generated name ESP + ChipID
-	if (!wifiManager->autoConnect())
-	{
-		DEBUG_FC_PRINTLN("Doesn't connect.");
-		return false;
-	}
-
-	//if you get here you have connected to the WiFi
-	DEBUG_FC_PRINTLN("Connected.");
-
-	if (_shouldSaveConfig)
-	{
-		//read updated parameters
-		strcpy(_mqttServer, customMqttServer.getValue());
-		strcpy(_mqttPort, customMqttPort.getValue());
-		strcpy(_mqttClientId, customClientName.getValue());
-		strcpy(_mqttUser, customMqttUser.getValue());
-		strcpy(_mqttPass, customMqttPass.getValue());
-		strcpy(_baseTopic, customBaseTopic.getValue());
-
-		SaveConfiguration();
-	}
-
-	return true;
-}
-
-void ReadConfiguration()
-{
-	if (!SPIFFS.begin())
-	{
-		DEBUG_FC_PRINTLN("Failed to mount FS");
-	}
-	else
-	{
-		DEBUG_FC_PRINTLN("The file system is mounted.");
-
-		if (SPIFFS.exists(CONFIG_FILE_NAME))
-		{
-			//file exists, reading and loading
-			DEBUG_FC_PRINTLN("Reading configuration file");
-			File configFile = SPIFFS.open(CONFIG_FILE_NAME, "r");
-			if (configFile)
-			{
-				DEBUG_FC_PRINTLN("Opening configuration file");
-				size_t size = configFile.size();
-				// Allocate a buffer to store contents of the file.
-				std::unique_ptr<char[]> buf(new char[size]);
-
-				configFile.readBytes(buf.get(), size);
-				DynamicJsonBuffer jsonBuffer;
-				JsonObject& json = jsonBuffer.parseObject(buf.get());
-#ifdef WIFIFCMM_DEBUG
-				json.printTo(DEBUG_FC);
-#endif
-				if (json.success())
-				{
-					DEBUG_FC_PRINTLN("\nJson is parsed");
-
-					strcpy(_mqttServer, json[MQTT_SERVER_KEY]);
-					strcpy(_mqttPort, json[MQTT_PORT_KEY]);
-					strcpy(_mqttClientId, json[MQTT_CLIENT_ID_KEY]);
-					strcpy(_mqttUser, json[MQTT_USER_KEY]);
-					strcpy(_mqttPass, json[MQTT_PASS_KEY]);
-					strcpy(_baseTopic, json[BASE_TOPIC_KEY]);
-					// After start device we should set this settings.
-					//_mode = (Mode)atoi(json[MODE_KEY]);
-					//_deviceState = atoi(json[TOPIC_DEVICE_STATE]) == 1 ? On : Off;
-				}
-				else
-				{
-					DEBUG_FC_PRINTLN(F("Loading json configuration is failed"));
-				}
-			}
-		}
-	}
-}
-
-void SaveConfiguration()
-{
-	DEBUG_FC_PRINTLN(F("Saving configuration..."));
-
-	DynamicJsonBuffer jsonBuffer;
-	JsonObject& json = jsonBuffer.createObject();
-
-	json[MQTT_SERVER_KEY] = _mqttServer;
-	json[MQTT_PORT_KEY] = _mqttPort;
-	json[MQTT_CLIENT_ID_KEY] = _mqttClientId;
-	json[MQTT_USER_KEY] = _mqttUser;
-	json[MQTT_PASS_KEY] = _mqttPass;
-	json[BASE_TOPIC_KEY] = _baseTopic;
-	// We shouldn't save this settings.
-	//json[MODE_KEY] = (int)_mode;
-	//json[TOPIC_DEVICE_STATE] = _deviceState == On ? 1 : 0;
-
-	File configFile = SPIFFS.open(CONFIG_FILE_NAME, "w");
-	if (!configFile) {
-		DEBUG_FC_PRINTLN(F("Failed to open a configuration file for writing."));
-	}
-	else
-	{
-		DEBUG_FC_PRINTLN(F("Configuration is saved."));
-	}
-
-#ifdef WIFIFCMM_DEBUG
-	json.prettyPrintTo(DEBUG_FC);
-#endif
-
-	json.printTo(configFile);
-	configFile.close();
 }

@@ -3,7 +3,9 @@
 #ifndef _FANCOILHELPER_h
 #define _FANCOILHELPER_h
 
+#include <FS.h>
 #include "Arduino.h"
+#include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
 
 // Uncomment to enable printing out nice debug messages.
 #define WIFIFCMM_DEBUG
@@ -95,11 +97,25 @@ enum DeviceData
 	DevicePing = 128
 };
 
-float calcAverage(float* data, uint8 dataLength, uint8 precision);
+struct DeviceSettings
+{
+	char MqttServer[MQTT_SERVER_LEN] = "x.cloudmqtt.com";
+	char MqttPort[MQTT_PORT_LEN] = "1883";
+	char MqttClientId[MQTT_CLIENT_ID_LEN] = "ESP8266Client";
+	char MqttUser[MQTT_USER_LEN];
+	char MqttPass[MQTT_PASS_LEN];
+	char BaseTopic[BASE_TOPIC_LEN] = "flat/bedroom1";
+};
 
 #ifdef WIFIFCMM_DEBUG
 void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length);
 #endif
 
-#endif
+float calcAverage(float* data, uint8 dataLength, uint8 precision);
 
+void ReadConfiguration(DeviceSettings* settings);
+bool mangeConnectParamers(WiFiManager* wifiManager, DeviceSettings* settings);
+void SaveConfiguration(DeviceSettings* settings);
+void saveConfigCallback();
+
+#endif
