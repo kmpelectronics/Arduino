@@ -13,4 +13,4 @@ Publish:
  basetopic/desiredtemp:24.0 - desired temperature
  basetopic/mode:heat - current device mode
  basetopic/state:on - current device state
- basetopic:started - The device has stated. This message need to send initiailize settings from a remote server. Example: desiredtemp
+ basetopic:ready - The device has stated. This message need to send initiailize settings from the remote server. It should publish: mode, desiredtemp and state.

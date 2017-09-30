@@ -26,12 +26,14 @@
 #include <PubSubClient.h>         // Install with Library Manager. "PubSubClient by Nick O'Leary" https://pubsubclient.knolleary.net/
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
+#include <OneWire.h>			  // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
+#include <DallasTemperature.h>    // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
 
 DeviceSettings _settings;
 
 WiFiClient _wifiClient;
 PubSubClient _mqttClient;
-DHT _dhtSensor(EXT_GROVE_D0, DHT22, 11);
+DHT _dhtSensor(DHT_SENSORS_PIN, DHT22, 11);
 
 // Text buffers for topic and payload.
 char _topicBuff[128];
@@ -44,17 +46,11 @@ DeviceState _deviceState = Off;
 DeviceState _lastDeviceState;
 
 float _desiredTemperature = 22.0;
-float _currentTemperature;
-float _averageTemperature;
+SensorData _temperatureData;
 float _tempCollection[TEMPERATURE_ARRAY_LEN];
-uint8_t _tempCollectPos = 0;
-unsigned long _checkTempInterval;
 
-float _currentHumidity;
-float _averageHumidity;
+SensorData _humidityData;
 float _humidityCollection[HUMIDITY_ARRAY_LEN];
-uint8_t _humidityCollectPos = 0;
-unsigned long _checkHumidityInterval;
 
 unsigned long _checkPingInterval;
 
@@ -65,10 +61,10 @@ bool _deviceIsConnected = false;
 
 bool getTemperatureAndHumidity(bool processStatus = true)
 {
-	_currentTemperature = _dhtSensor.readTemperature();
-	_currentHumidity = _dhtSensor.readHumidity();
+	_temperatureData.Current = _dhtSensor.readTemperature();
+	_humidityData.Current = _dhtSensor.readHumidity();
 
-	bool result = _currentHumidity != NAN && _currentTemperature != NAN;
+	bool result = _temperatureData.Current != NAN && _humidityData.Current != NAN;
 
 	if (processStatus)
 	{
@@ -85,6 +81,18 @@ bool getTemperatureAndHumidity(bool processStatus = true)
 */
 void setup(void)
 {
+	_temperatureData.DataCollection = _tempCollection;
+	_temperatureData.DataCollectionLen = TEMPERATURE_ARRAY_LEN;
+	_temperatureData.Precision = TEMPERATURE_PRECISION;
+	_temperatureData.CheckDataIntervalMS = CHECK_TEMP_INTERVAL_MS;
+	_temperatureData.DataType = Temperature;
+
+	_humidityData.DataCollection = _humidityCollection;
+	_humidityData.DataCollectionLen = HUMIDITY_ARRAY_LEN;
+	_humidityData.Precision = HUMIDITY_PRECISION;
+	_humidityData.CheckDataIntervalMS = CHECK_HUMIDITY_INTERVAL_MS;
+	_humidityData.DataType = Humidity;
+
 	// You can open the Arduino IDE Serial Monitor window to see what the code is doing
 	DEBUG_FC.begin(115200);
 	// Init KMP ProDino WiFi-ESP board.
@@ -121,12 +129,12 @@ void setup(void)
 	{
 		for (size_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
 		{
-			_tempCollection[i] = _currentTemperature;
+			_tempCollection[i] = _temperatureData.Current;
 		}
 
 		for (size_t i = 0; i < HUMIDITY_ARRAY_LEN; i++)
 		{
-			_humidityCollection[i] = _currentHumidity;
+			_humidityCollection[i] = _humidityData.Current;
 		}
 	}
 
@@ -143,7 +151,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
 
-		float val = sendCurrent ? _currentTemperature : _averageTemperature;
+		float val = sendCurrent ? _temperatureData.Current : _temperatureData.Average;
 
 		mqttPublish(_topicBuff, floatToStr(val, TEMPERATURE_PRECISION));
 	}
@@ -152,7 +160,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
 
-		float val = sendCurrent ? _currentHumidity : _averageHumidity;
+		float val = sendCurrent ? _humidityData.Current : _humidityData.Average;
 
 		mqttPublish(_topicBuff, floatToStr(val, HUMIDITY_PRECISION));
 	}
@@ -223,12 +231,12 @@ void loop(void)
 
 	_mqttClient.loop();
 	
-	collectTemperature();
-	processTemperature();
+	collectData(&_temperatureData);
+	processData(&_temperatureData);
 
-	collectHumidity();
-	processHumidity();
-
+	collectData(&_humidityData);
+	processData(&_humidityData);
+	
 	fanCoilControl();
 
 	if (millis() > _checkPingInterval)
@@ -390,64 +398,33 @@ void processConnectionStatus(bool isConnected)
 	}
 }
 
-
-void collectTemperature()
+void collectData(SensorData* data)
 {
-	if (millis() > _checkTempInterval)
+	if (millis() > data->CheckInterval)
 	{
-		if (_tempCollectPos >= TEMPERATURE_ARRAY_LEN)
+		if (data->CurrentCollectPos >= data->DataCollectionLen)
 		{
-			_tempCollectPos = 0;
+			data->DataCollectionLen = 0;
 		}
 
 		if (_isSensorExist)
 		{
-			_tempCollection[_tempCollectPos++] = roundF(_currentTemperature, TEMPERATURE_PRECISION);
+			data->DataCollection[data->CurrentCollectPos++] = roundF(data->Current, data->Precision);
 		}
 
 		// Set next time to read data.
-		_checkTempInterval = millis() + CHECK_TEMP_INTERVAL_MS;
+		data->CheckInterval = millis() + data->CheckDataIntervalMS;
 	}
 }
 
-void collectHumidity()
+void processData(SensorData* data)
 {
-	if (millis() > _checkHumidityInterval)
+	float result = calcAverage(data->DataCollection, data->DataCollectionLen, data->Precision);
+
+	if (data->Average != result)
 	{
-		if (_humidityCollectPos >= HUMIDITY_ARRAY_LEN)
-		{
-			_humidityCollectPos = 0;
-		}
-
-		if (_isSensorExist)
-		{
-			_humidityCollection[_humidityCollectPos++] = roundF(_currentHumidity, HUMIDITY_PRECISION);
-		}
-
-		// Set next time to read data.
-		_checkHumidityInterval = millis() + CHECK_HUMIDITY_INTERVAL_MS;
-	}
-}
-
-void processTemperature()
-{
-	float result = calcAverage(_tempCollection, TEMPERATURE_ARRAY_LEN, TEMPERATURE_PRECISION);
-
-	if (_averageTemperature != result)
-	{
-		_averageTemperature = result;
-		publishData(Temperature);
-	}
-}
-
-void processHumidity()
-{
-	float result = calcAverage(_humidityCollection, HUMIDITY_ARRAY_LEN, HUMIDITY_PRECISION);
-
-	if (_averageHumidity != result)
-	{
-		_averageHumidity = result;
-		publishData(Humidity);
+		data->Average = result;
+		publishData(data->DataType);
 	}
 }
 
@@ -463,7 +440,9 @@ void fanCoilControl()
 		return;
 	}
 
-	float diffTemp = _mode == Cold ? _currentTemperature - _desiredTemperature /* Cold */ : _desiredTemperature - _currentTemperature /* Heat */;
+	float averageTemp = _temperatureData.Average;
+
+	float diffTemp = _mode == Cold ? averageTemp - _desiredTemperature /* Cold */ : _desiredTemperature - averageTemp /* Heat */;
 
 	// Bypass the fan coil.
 	if (diffTemp < -1.0)

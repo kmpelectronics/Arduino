@@ -22,24 +22,34 @@
 #define DEBUG_FC_PRINTLN(...) {}
 #endif
 
-const uint8_t FAN_SWITCH_LEVEL_LEN = 3;
+#define FAN_SWITCH_LEVEL_LEN 3
 
-const uint8_t MQTT_SERVER_LEN = 40;
-const uint8_t MQTT_PORT_LEN = 8;
-const uint8_t MQTT_CLIENT_ID_LEN = 32;
-const uint8_t MQTT_USER_LEN = 16;
-const uint8_t MQTT_PASS_LEN = 16;
-const uint8_t BASE_TOPIC_LEN = 32;
+#define MQTT_SERVER_LEN 40
+#define MQTT_PORT_LEN 8
+#define MQTT_CLIENT_ID_LEN 32
+#define MQTT_USER_LEN 16
+#define MQTT_PASS_LEN 16
+#define BASE_TOPIC_LEN 32
 
-const uint8_t TEMPERATURE_ARRAY_LEN = 10;
-const uint8_t TEMPERATURE_PRECISION = 1;
-const long CHECK_TEMP_INTERVAL_MS = 5000;
+#define TEMPERATURE_ARRAY_LEN 10
+#define TEMPERATURE_PRECISION 1
+#define CHECK_TEMP_INTERVAL_MS 5000
 
-const uint8_t HUMIDITY_ARRAY_LEN = 5;
-const uint8_t HUMIDITY_PRECISION = 0;
-const long CHECK_HUMIDITY_INTERVAL_MS = 10000;
+#define HUMIDITY_ARRAY_LEN 5
+#define HUMIDITY_PRECISION 0
+#define CHECK_HUMIDITY_INTERVAL_MS 10000
 
-const long PING_INTERVAL_MS = 30000;
+#define PING_INTERVAL_MS 30000
+
+#define MIN_DESIRED_TEMPERATURE 15.0
+#define MAX_DESIRED_TEMPERATURE 30.0
+
+// Thermometer Resolution in bits. http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf page 8. 
+// Bits - CONVERSION TIME. 9 - 93.75ms, 10 - 187.5ms, 11 - 375ms, 12 - 750ms. 
+#define TEMPERATURE_PRECISION_1WIRE 9
+#define ONEWIRE_SENSORS_PIN EXT_GROVE_D1
+
+#define DHT_SENSORS_PIN EXT_GROVE_D0
 
 const char MQTT_SERVER_KEY[] = "mqttServer";
 const char MQTT_PORT_KEY[] = "mqttPort";
@@ -69,9 +79,6 @@ const char EVERY_ONE_LEVEL_TOPIC[] = "+";
 const char NOT_AVILABLE[] = "N/A";
 
 const float FAN_SWITCH_LEVEL[FAN_SWITCH_LEVEL_LEN] = { 0, 0.5, 1.0 };
-
-const float MIN_DESIRED_TEMPERATURE = 15;
-const float MAX_DESIRED_TEMPERATURE = 30;
 
 enum Mode
 {
@@ -105,6 +112,19 @@ struct DeviceSettings
 	char MqttUser[MQTT_USER_LEN];
 	char MqttPass[MQTT_PASS_LEN];
 	char BaseTopic[BASE_TOPIC_LEN] = "flat/bedroom1";
+};
+
+struct SensorData
+{
+	float Current;
+	float Average;
+	float* DataCollection;
+	uint DataCollectionLen;
+	uint8_t CurrentCollectPos = 0;
+	unsigned long CheckInterval;
+	uint Precision;
+	uint CheckDataIntervalMS;
+	DeviceData DataType;
 };
 
 #ifdef WIFIFCMM_DEBUG
