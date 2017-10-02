@@ -30,6 +30,7 @@
 #define MQTT_USER_LEN 16
 #define MQTT_PASS_LEN 16
 #define BASE_TOPIC_LEN 32
+#define INLET_SENSOR_CRC_LEN 16
 
 #define TEMPERATURE_ARRAY_LEN 10
 #define TEMPERATURE_PRECISION 1
@@ -39,17 +40,28 @@
 #define HUMIDITY_PRECISION 0
 #define CHECK_HUMIDITY_INTERVAL_MS 10000
 
+#define INLET_ARRAY_LEN 5
+#define INLET_PRECISION 1
+#define CHECK_INLET_INTERVAL_MS CHECK_TEMP_INTERVAL_MS
+
+#define OUTLET_ARRAY_LEN 5
+#define OUTLET_PRECISION 1
+#define CHECK_OUTLET_INTERVAL_MS CHECK_TEMP_INTERVAL_MS
+
 #define PING_INTERVAL_MS 30000
+
+#define MIN_DIFFERENCE_TEMPERATURE 5
 
 #define MIN_DESIRED_TEMPERATURE 15.0
 #define MAX_DESIRED_TEMPERATURE 30.0
 
-// Thermometer Resolution in bits. http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf page 8. 
-// Bits - CONVERSION TIME. 9 - 93.75ms, 10 - 187.5ms, 11 - 375ms, 12 - 750ms. 
-#define TEMPERATURE_PRECISION_1WIRE 9
-#define ONEWIRE_SENSORS_PIN EXT_GROVE_D1
-
 #define DHT_SENSORS_PIN EXT_GROVE_D0
+#define DHT_SENSORS_TYPE DHT22
+
+// Thermometer Resolution in bits. http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf page 8. 
+// Bits - CONVERSION TIME. 9 - 93.75ms (0.5°C), 10 - 187.5ms (0.25°C), 11 - 375ms (0.125°C), 12 - 750ms (0.0625°C). 
+#define ONEWIRE_TEMPERATURE_PRECISION 10
+#define ONEWIRE_SENSORS_PIN EXT_GROVE_D1
 
 const char MQTT_SERVER_KEY[] = "mqttServer";
 const char MQTT_PORT_KEY[] = "mqttPort";
@@ -57,6 +69,7 @@ const char MQTT_CLIENT_ID_KEY[] = "mqttClientId";
 const char MQTT_USER_KEY[] = "mqttUser";
 const char MQTT_PASS_KEY[] = "mqttPass";
 const char BASE_TOPIC_KEY[] = "baseTopic";
+const char INLET_SENSOR_KEY[] = "inletSensorCRC";
 const char MODE_KEY[] = "mode";
 const char CONFIG_FILE_NAME[] = "/config.json";
 
@@ -78,6 +91,8 @@ const char PAYLOAD_PING[] = "ping";
 const char EVERY_ONE_LEVEL_TOPIC[] = "+";
 const char NOT_AVILABLE[] = "N/A";
 
+const char MUST_BE_ONE[] = "Must be one";
+
 const float FAN_SWITCH_LEVEL[FAN_SWITCH_LEVEL_LEN] = { 0, 0.5, 1.0 };
 
 enum Mode
@@ -96,12 +111,14 @@ enum DeviceData
 {
 	Temperature = 1,
 	DesiredTemp = 2,
-	FanDegree = 4,
-	CurrentMode = 8,
-	CurrentDeviceState = 16,
-	Humidity = 32,
-	DeviceIsReady = 64,
-	DevicePing = 128
+	InletPipe = 4,
+	OutletPipe = 8,
+	FanDegree = 16,
+	CurrentMode = 32,
+	CurrentDeviceState = 64,
+	Humidity = 128,
+	DeviceIsReady = 256,
+	DevicePing = 512
 };
 
 struct DeviceSettings
@@ -112,6 +129,7 @@ struct DeviceSettings
 	char MqttUser[MQTT_USER_LEN];
 	char MqttPass[MQTT_PASS_LEN];
 	char BaseTopic[BASE_TOPIC_LEN] = "flat/bedroom1";
+	char InletSensorCRC[INLET_SENSOR_CRC_LEN] = ""; 
 };
 
 struct SensorData

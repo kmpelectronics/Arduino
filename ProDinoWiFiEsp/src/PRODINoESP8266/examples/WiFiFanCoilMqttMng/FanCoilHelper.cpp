@@ -76,12 +76,13 @@ void ReadConfiguration(DeviceSettings* settings)
 				{
 					DEBUG_FC_PRINTLN("\nJson is parsed");
 
-					strcpy(settings->MqttServer, json[MQTT_SERVER_KEY]);
-					strcpy(settings->MqttPort, json[MQTT_PORT_KEY]);
-					strcpy(settings->MqttClientId, json[MQTT_CLIENT_ID_KEY]);
-					strcpy(settings->MqttUser, json[MQTT_USER_KEY]);
-					strcpy(settings->MqttPass, json[MQTT_PASS_KEY]);
-					strcpy(settings->BaseTopic, json[BASE_TOPIC_KEY]);
+					copyJsonValue(settings->MqttServer, json[MQTT_SERVER_KEY]);
+					copyJsonValue(settings->MqttPort, json[MQTT_PORT_KEY]);
+					copyJsonValue(settings->MqttClientId, json[MQTT_CLIENT_ID_KEY]);
+					copyJsonValue(settings->MqttUser, json[MQTT_USER_KEY]);
+					copyJsonValue(settings->MqttPass, json[MQTT_PASS_KEY]);
+					copyJsonValue(settings->BaseTopic, json[BASE_TOPIC_KEY]);
+					copyJsonValue(settings->InletSensorCRC, json[INLET_SENSOR_KEY]);
 					// After start device we should set this settings.
 					//_mode = (Mode)atoi(json[MODE_KEY]);
 					//_deviceState = atoi(json[TOPIC_DEVICE_STATE]) == 1 ? On : Off;
@@ -93,6 +94,16 @@ void ReadConfiguration(DeviceSettings* settings)
 			}
 		}
 	}
+}
+
+void copyJsonValue(char* s, const char* jsonValue)
+{
+	if (jsonValue == NULL)
+	{
+		s[0] = NULL;
+	}
+
+	strncpy(s, jsonValue, strlen(jsonValue));
 }
 
 /**
@@ -117,6 +128,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager, DeviceSettings* settings)
 	WiFiManagerParameter customMqttUser("user", "MQTT user", settings->MqttUser, MQTT_USER_LEN);
 	WiFiManagerParameter customMqttPass("password", "MQTT pass", settings->MqttPass, MQTT_PASS_LEN);
 	WiFiManagerParameter customBaseTopic("baseTopic", "Main topic", settings->BaseTopic, BASE_TOPIC_LEN);
+	WiFiManagerParameter customInletSensorCRC("inletSensorCRC", "Inlet sensor CRC", settings->InletSensorCRC, INLET_SENSOR_CRC_LEN);
 
 	// add all your parameters here
 	wifiManager->addParameter(&customMqttServer);
@@ -125,6 +137,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager, DeviceSettings* settings)
 	wifiManager->addParameter(&customMqttUser);
 	wifiManager->addParameter(&customMqttPass);
 	wifiManager->addParameter(&customBaseTopic);
+	wifiManager->addParameter(&customInletSensorCRC);
 
 	// fetches ssid and pass from eeprom and tries to connect
 	// if it does not connect it starts an access point with the specified name
@@ -147,6 +160,7 @@ bool mangeConnectParamers(WiFiManager* wifiManager, DeviceSettings* settings)
 		strcpy(settings->MqttUser, customMqttUser.getValue());
 		strcpy(settings->MqttPass, customMqttPass.getValue());
 		strcpy(settings->BaseTopic, customBaseTopic.getValue());
+		strcpy(settings->InletSensorCRC, customInletSensorCRC.getValue());
 
 		SaveConfiguration(settings);
 	}
@@ -167,6 +181,8 @@ void SaveConfiguration(DeviceSettings* settings)
 	json[MQTT_USER_KEY] = settings->MqttUser;
 	json[MQTT_PASS_KEY] = settings->MqttPass;
 	json[BASE_TOPIC_KEY] = settings->BaseTopic;
+	json[INLET_SENSOR_KEY] = settings->InletSensorCRC;
+
 	// We shouldn't save this settings.
 	//json[MODE_KEY] = (int)_mode;
 	//json[TOPIC_DEVICE_STATE] = _deviceState == On ? 1 : 0;

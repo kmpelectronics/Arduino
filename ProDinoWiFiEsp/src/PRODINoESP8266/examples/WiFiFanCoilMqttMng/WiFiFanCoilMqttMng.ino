@@ -26,14 +26,17 @@
 #include <PubSubClient.h>         // Install with Library Manager. "PubSubClient by Nick O'Leary" https://pubsubclient.knolleary.net/
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
-#include <OneWire.h>			  // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
-#include <DallasTemperature.h>    // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
+#include <DallasTemperature.h>    // Install with Library Manager. "DallasTemperature by Miles Burton, ..." https://github.com/milesburton/Arduino-Temperature-Control-Library
+#include <OneWire.h>			  // This library Installed together with a DallasTemperature library.
 
 DeviceSettings _settings;
 
 WiFiClient _wifiClient;
 PubSubClient _mqttClient;
-DHT _dhtSensor(DHT_SENSORS_PIN, DHT22, 11);
+DHT _dhtSensor(DHT_SENSORS_PIN, DHT_SENSORS_TYPE, 11);
+
+OneWire _oneWire(ONEWIRE_SENSORS_PIN);
+DallasTemperature _oneWireSensors(&_oneWire);
 
 // Text buffers for topic and payload.
 char _topicBuff[128];
@@ -51,6 +54,14 @@ float _tempCollection[TEMPERATURE_ARRAY_LEN];
 
 SensorData _humidityData;
 float _humidityCollection[HUMIDITY_ARRAY_LEN];
+
+SensorData _inletData;
+float _inletCollection[INLET_ARRAY_LEN];
+
+SensorData _outletData;
+float _outletCollection[OUTLET_ARRAY_LEN];
+
+uint _pipeSensorCount;
 
 unsigned long _checkPingInterval;
 
@@ -93,6 +104,18 @@ void setup(void)
 	_humidityData.CheckDataIntervalMS = CHECK_HUMIDITY_INTERVAL_MS;
 	_humidityData.DataType = Humidity;
 
+	_inletData.DataCollection = _inletCollection;
+	_inletData.DataCollectionLen = INLET_ARRAY_LEN;
+	_inletData.Precision = INLET_PRECISION;
+	_inletData.CheckDataIntervalMS = CHECK_INLET_INTERVAL_MS;
+	_inletData.DataType = InletPipe;
+
+	_outletData.DataCollection = _outletCollection;
+	_outletData.DataCollectionLen = OUTLET_ARRAY_LEN;
+	_outletData.Precision = OUTLET_PRECISION;
+	_outletData.CheckDataIntervalMS = CHECK_OUTLET_INTERVAL_MS;
+	_outletData.DataType = OutletPipe;
+
 	// You can open the Arduino IDE Serial Monitor window to see what the code is doing
 	DEBUG_FC.begin(115200);
 	// Init KMP ProDino WiFi-ESP board.
@@ -113,6 +136,9 @@ void setup(void)
 		wifiManager.resetSettings();
 		DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
 	}
+
+	_oneWireSensors.begin();
+	_pipeSensorCount = _oneWireSensors.getDeviceCount();
 
 	// Set save configuration callback.
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -137,6 +163,9 @@ void setup(void)
 			_humidityCollection[i] = _humidityData.Current;
 		}
 	}
+
+	// TODO: Add resolution per sensor.
+	//sensors.setResolution(insideThermometer, TEMPERATURE_PRECISION);
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
