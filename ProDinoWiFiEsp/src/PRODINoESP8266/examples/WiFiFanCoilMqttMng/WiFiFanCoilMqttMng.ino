@@ -58,11 +58,6 @@ float _humidityCollection[HUMIDITY_ARRAY_LEN];
 SensorData _inletData;
 float _inletCollection[INLET_ARRAY_LEN];
 
-SensorData _outletData;
-float _outletCollection[OUTLET_ARRAY_LEN];
-
-uint _pipeSensorCount;
-
 unsigned long _checkPingInterval;
 
 // Store last time intervals. 0 -  measure Temp, 1 - ping
@@ -85,12 +80,7 @@ bool getTemperatureAndHumidity(bool processStatus = true)
 	return result;
 }
 
-/**
-* @brief Execute first after start the device. Initialize hardware.
-*
-* @return void
-*/
-void setup(void)
+void initializeSensorData()
 {
 	_temperatureData.DataCollection = _tempCollection;
 	_temperatureData.DataCollectionLen = TEMPERATURE_ARRAY_LEN;
@@ -109,12 +99,57 @@ void setup(void)
 	_inletData.Precision = INLET_PRECISION;
 	_inletData.CheckDataIntervalMS = CHECK_INLET_INTERVAL_MS;
 	_inletData.DataType = InletPipe;
+}
 
-	_outletData.DataCollection = _outletCollection;
-	_outletData.DataCollectionLen = OUTLET_ARRAY_LEN;
-	_outletData.Precision = OUTLET_PRECISION;
-	_outletData.CheckDataIntervalMS = CHECK_OUTLET_INTERVAL_MS;
-	_outletData.DataType = OutletPipe;
+void getPipeSensors()
+{
+	uint8_t pipeSensorCount = _oneWireSensors.getDeviceCount();
+	if (pipeSensorCount > 0)
+	{
+		DeviceAddress deviceAddress;
+
+		for (uint8_t i = 0; i < pipeSensorCount; i++)
+		{
+			bool isExists = _oneWireSensors.getAddress(_inletData.Address, i);
+			if (i == 0)
+			{
+				// Process only first device
+				_inletData.IsExist = isExists;
+			}
+
+			if (isExists)
+			{
+				_oneWireSensors.setResolution(deviceAddress, ONEWIRE_TEMPERATURE_PRECISION);
+			}
+		}
+	}
+}
+
+bool getPipesTemperature()
+{
+	if (!_inletData.IsExist)
+	{
+		getPipeSensors();
+	}
+
+	if (_inletData.IsExist)
+	{
+		_inletData.Current = _oneWireSensors.getTempC(_inletData.Address);
+
+		_inletData.IsExist = _inletData.Current != NAN;
+	}
+
+	return _inletData.IsExist;
+}
+
+/**
+* @brief Execute first after start the device. Initialize hardware.
+*
+* @return void
+*/
+void setup(void)
+{
+	initializeSensorData();
 
 	// You can open the Arduino IDE Serial Monitor window to see what the code is doing
 	DEBUG_FC.begin(115200);
@@ -137,9 +172,6 @@ void setup(void)
 		DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
 	}
 
-	_oneWireSensors.begin();
-	_pipeSensorCount = _oneWireSensors.getDeviceCount();
-
 	// Set save configuration callback.
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
 	
@@ -153,19 +185,15 @@ void setup(void)
 	// Initialize arrays.
 	if (getTemperatureAndHumidity(false))
 	{
-		for (size_t i = 0; i < TEMPERATURE_ARRAY_LEN; i++)
-		{
-			_tempCollection[i] = _temperatureData.Current;
-		}
-
-		for (size_t i = 0; i < HUMIDITY_ARRAY_LEN; i++)
-		{
-			_humidityCollection[i] = _humidityData.Current;
-		}
+		setArrayValues(&_temperatureData);
+		setArrayValues(&_humidityData);
 	}
 
-	// TODO: Add resolution per sensor.
-	//sensors.setResolution(insideThermometer, TEMPERATURE_PRECISION);
+	_oneWireSensors.begin();
+	if (getPipesTemperature())
+	{
+		setArrayValues(&_inletData);
+	}
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
@@ -178,7 +206,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 {
 	if (CHECK_ENUM(deviceData, Temperature))
 	{
-		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_CURRENT_TEMPERATURE);
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_TEMPERATURE);
 
 		float val = sendCurrent ? _temperatureData.Current : _temperatureData.Average;
 
@@ -260,12 +288,17 @@ void loop(void)
 
 	_mqttClient.loop();
 	
-	collectData(&_temperatureData);
-	processData(&_temperatureData);
+	if (getTemperatureAndHumidity(true))
+	{
+		processData(&_temperatureData);
+		processData(&_humidityData);
 
-	collectData(&_humidityData);
-	processData(&_humidityData);
-	
+		if (getPipesTemperature())
+		{
+			processData(&_inletData);
+		} 
+	}
+
 	fanCoilControl();
 
 	if (millis() > _checkPingInterval)
@@ -410,7 +443,7 @@ void processConnectionStatus(bool isConnected)
 		if (_deviceIsConnected != isConnected)
 		{
 			_deviceIsConnected = isConnected;
-			publishData((DeviceData)(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity | DeviceIsReady));
+			publishData((DeviceData)(Temperature | DesiredTemp | InletPipe | FanDegree | CurrentMode | CurrentDeviceState | Humidity | DeviceIsReady));
 		}
 		
 		return;
@@ -427,7 +460,7 @@ void processConnectionStatus(bool isConnected)
 	}
 }
 
-void collectData(SensorData* data)
+void processData(SensorData* data)
 {
 	if (millis() > data->CheckInterval)
 	{
@@ -441,19 +474,17 @@ void collectData(SensorData* data)
 			data->DataCollection[data->CurrentCollectPos++] = roundF(data->Current, data->Precision);
 		}
 
+		// Process collected data
+		float result = calcAverage(data->DataCollection, data->DataCollectionLen, data->Precision);
+
+		if (data->Average != result)
+		{
+			data->Average = result;
+			publishData(data->DataType);
+		}
+
 		// Set next time to read data.
 		data->CheckInterval = millis() + data->CheckDataIntervalMS;
-	}
-}
-
-void processData(SensorData* data)
-{
-	float result = calcAverage(data->DataCollection, data->DataCollectionLen, data->Precision);
-
-	if (data->Average != result)
-	{
-		data->Average = result;
-		publishData(data->DataType);
 	}
 }
 
@@ -469,9 +500,7 @@ void fanCoilControl()
 		return;
 	}
 
-	float averageTemp = _temperatureData.Average;
-
-	float diffTemp = _mode == Cold ? averageTemp - _desiredTemperature /* Cold */ : _desiredTemperature - averageTemp /* Heat */;
+	float diffTemp = _mode == Cold ? _temperatureData.Average - _desiredTemperature /* Cold */ : _desiredTemperature - _temperatureData.Average /* Heat */;
 
 	// Bypass the fan coil.
 	if (diffTemp < -1.0)
@@ -479,13 +508,24 @@ void fanCoilControl()
 		// TODO: Add bypass logic.
 	}
 
-	uint8_t degree = FAN_SWITCH_LEVEL_LEN;
-	for (uint8_t i = 0; i < FAN_SWITCH_LEVEL_LEN; i++)
+	float pipeDiffTemp = NAN;
+	
+	if (_inletData.IsExist)
 	{
-		if (diffTemp <= FAN_SWITCH_LEVEL[i])
+		pipeDiffTemp = _mode == Cold ? _temperatureData.Average - _inletData.Average /* Cold */ : _inletData.Average - _temperatureData.Average /* Heat */;
+	}
+
+	uint8_t degree = 0;
+	// If inlet sensor doesn't exist or difference between inlet pipe temperature and ambient temperature > 5 degree get fan degree.
+	if (pipeDiffTemp == NAN || pipeDiffTemp > 5)
+	{
+		for (uint8_t i = 0; i < FAN_SWITCH_LEVEL_LEN; i++)
 		{
-			degree = i;
-			break;
+			if (diffTemp <= FAN_SWITCH_LEVEL[i])
+			{
+				degree = i;
+				break;
+			}
 		}
 	}
 

@@ -44,10 +44,6 @@
 #define INLET_PRECISION 1
 #define CHECK_INLET_INTERVAL_MS CHECK_TEMP_INTERVAL_MS
 
-#define OUTLET_ARRAY_LEN 5
-#define OUTLET_PRECISION 1
-#define CHECK_OUTLET_INTERVAL_MS CHECK_TEMP_INTERVAL_MS
-
 #define PING_INTERVAL_MS 30000
 
 #define MIN_DIFFERENCE_TEMPERATURE 5
@@ -76,7 +72,7 @@ const char CONFIG_FILE_NAME[] = "/config.json";
 const char TOPIC_SEPARATOR[] = "/";
 const char TOPIC_HUMIDITY[] = "humidity";
 const char TOPIC_DESIRED_TEMPERATURE[] = "desiredtemp";
-const char TOPIC_CURRENT_TEMPERATURE[] = "currenttemp";
+const char TOPIC_TEMPERATURE[] = "temperature";
 const char TOPIC_SET[] = "set";
 const char TOPIC_MODE[] = "mode";
 const char PAYLOAD_HEAT[] = "heat";
@@ -112,13 +108,12 @@ enum DeviceData
 	Temperature = 1,
 	DesiredTemp = 2,
 	InletPipe = 4,
-	OutletPipe = 8,
-	FanDegree = 16,
-	CurrentMode = 32,
-	CurrentDeviceState = 64,
-	Humidity = 128,
-	DeviceIsReady = 256,
-	DevicePing = 512
+	FanDegree = 8,
+	CurrentMode = 16,
+	CurrentDeviceState = 32,
+	Humidity = 64,
+	DeviceIsReady = 128,
+	DevicePing = 256
 };
 
 struct DeviceSettings
@@ -129,20 +124,32 @@ struct DeviceSettings
 	char MqttUser[MQTT_USER_LEN];
 	char MqttPass[MQTT_PASS_LEN];
 	char BaseTopic[BASE_TOPIC_LEN] = "flat/bedroom1";
-	char InletSensorCRC[INLET_SENSOR_CRC_LEN] = ""; 
 };
 
 struct SensorData
 {
+	// Current measured value
 	float Current;
+	// Average value calculated from all collected data in DataCollection
 	float Average;
+	// An array which stores collected data
 	float* DataCollection;
+	// The array length
 	uint DataCollectionLen;
+	// Current array position
 	uint8_t CurrentCollectPos = 0;
+	// Next time for check value
 	unsigned long CheckInterval;
+	// Precision with which round measured value
 	uint Precision;
+	// Check value interval
 	uint CheckDataIntervalMS;
+	// Stored in this structure data type
 	DeviceData DataType;
+	// DS18B20 device address
+	uint8_t Address[8];
+	// Is true, if the sensor exists
+	bool IsExist;
 };
 
 #ifdef WIFIFCMM_DEBUG
@@ -155,5 +162,7 @@ void ReadConfiguration(DeviceSettings* settings);
 bool mangeConnectParamers(WiFiManager* wifiManager, DeviceSettings* settings);
 void SaveConfiguration(DeviceSettings* settings);
 void saveConfigCallback();
+
+void setArrayValues(SensorData* sensor);
 
 #endif
