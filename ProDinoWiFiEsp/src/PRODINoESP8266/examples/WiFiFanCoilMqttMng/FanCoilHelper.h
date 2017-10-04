@@ -5,6 +5,7 @@
 
 #include <FS.h>
 #include "Arduino.h"
+#include <ESP8266WiFi.h>
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
 
 // Uncomment to enable printing out nice debug messages.
@@ -75,12 +76,13 @@ const char TOPIC_DESIRED_TEMPERATURE[] = "desiredtemp";
 const char TOPIC_TEMPERATURE[] = "temperature";
 const char TOPIC_SET[] = "set";
 const char TOPIC_MODE[] = "mode";
+const char TOPIC_DEVICE_STATE[] = "state";
+const char TOPIC_FAN_DEGREE[] = "fandegree";
+const char TOPIC_INLET_TEMPERATURE[] = "inlettemp";
 const char PAYLOAD_HEAT[] = "heat";
 const char PAYLOAD_COLD[] = "cold";
-const char TOPIC_DEVICE_STATE[] = "state";
 const char PAYLOAD_ON[] = "on";
 const char PAYLOAD_OFF[] = "off";
-const char TOPIC_FAN_DEGREE[] = "fandegree";
 const char PAYLOAD_READY[] = "ready";
 const char PAYLOAD_PING[] = "ping";
 
@@ -155,6 +157,8 @@ struct SensorData
 #ifdef WIFIFCMM_DEBUG
 void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length);
 #endif
+
+bool connectWiFi();
 
 float calcAverage(float* data, uint8 dataLength, uint8 precision);
 

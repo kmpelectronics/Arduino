@@ -16,7 +16,6 @@
 #include "FanCoilHelper.h"
 #include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
 #include "KMPCommon.h"
-#include <ESP8266WiFi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -71,6 +70,9 @@ bool getTemperatureAndHumidity(bool processStatus = true)
 	_humidityData.Current = _dhtSensor.readHumidity();
 
 	bool result = _temperatureData.Current != NAN && _humidityData.Current != NAN;
+	
+	_temperatureData.IsExist = result;
+	_humidityData.IsExist = result;
 
 	if (processStatus)
 	{
@@ -166,10 +168,10 @@ void setup(void)
 	// Is OptoIn 4 is On the board is resetting WiFi configuration.
 	if (KMPDinoWiFiESP.GetOptoInState(OptoIn4))
 	{
-		DEBUG_FC_PRINTLN("Resetting WiFi configuration...\r\n");
+		DEBUG_FC_PRINTLN(F("Resetting WiFi configuration...\r\n"));
 		//reset saved settings
 		wifiManager.resetSettings();
-		DEBUG_FC_PRINTLN("WiFi configuration was reseted.\r\n");
+		DEBUG_FC_PRINTLN(F("WiFi configuration was reseted.\r\n"));
 	}
 
 	// Set save configuration callback.
@@ -181,19 +183,17 @@ void setup(void)
 	}
 
 	_dhtSensor.begin();
-
-	// Initialize arrays.
 	if (getTemperatureAndHumidity(false))
 	{
 		setArrayValues(&_temperatureData);
 		setArrayValues(&_humidityData);
 	}
 
-	_oneWireSensors.begin();
-	if (getPipesTemperature())
-	{
-		setArrayValues(&_inletData);
-	}
+	//_oneWireSensors.begin();
+	//if (getPipesTemperature())
+	//{
+	//	setArrayValues(&_inletData);
+	//}
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
@@ -222,6 +222,15 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 		mqttPublish(_topicBuff, floatToStr(val, HUMIDITY_PRECISION));
 	}
 
+	if (CHECK_ENUM(deviceData, InletPipe))
+	{
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_INLET_TEMPERATURE);
+
+		float val = sendCurrent ? _inletData.Current : _inletData.Average;
+
+		mqttPublish(_topicBuff, floatToStr(val, HUMIDITY_PRECISION));
+	}
+	
 	if (CHECK_ENUM(deviceData, FanDegree))
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_FAN_DEGREE);
@@ -293,10 +302,10 @@ void loop(void)
 		processData(&_temperatureData);
 		processData(&_humidityData);
 
-		if (getPipesTemperature())
-		{
-			processData(&_inletData);
-		} 
+		//if (getPipesTemperature())
+		//{
+		//	processData(&_inletData);
+		//} 
 	}
 
 	fanCoilControl();
@@ -327,7 +336,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 	// Processing base topic - command send all data from device.
 	if (strlen(topic) == baseTopicLen && length == 0)
 	{
-		DeviceData deviceData = (DeviceData)(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity);
+		DeviceData deviceData = (DeviceData)(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity | InletPipe);
 		publishData(deviceData, true);
 		return;
 	}
@@ -432,7 +441,7 @@ void processDeviceStatus(bool isSensorExist)
 
 		// If sensor doesn't exist 2 time, switch device to Off.
 		_deviceState = Off;
-		publishData(CurrentDeviceState);
+		publishData((DeviceData)(Temperature | Humidity | CurrentDeviceState));
 	}
 }
 
@@ -440,9 +449,9 @@ void processConnectionStatus(bool isConnected)
 {
 	if (isConnected)
 	{
-		if (_deviceIsConnected != isConnected)
+		if (!_deviceIsConnected)
 		{
-			_deviceIsConnected = isConnected;
+			_deviceIsConnected = true;
 			publishData((DeviceData)(Temperature | DesiredTemp | InletPipe | FanDegree | CurrentMode | CurrentDeviceState | Humidity | DeviceIsReady));
 		}
 		
@@ -466,7 +475,7 @@ void processData(SensorData* data)
 	{
 		if (data->CurrentCollectPos >= data->DataCollectionLen)
 		{
-			data->DataCollectionLen = 0;
+			data->CurrentCollectPos = 0;
 		}
 
 		if (_isSensorExist)
@@ -584,33 +593,6 @@ void mqttPublish(const char* topic, char* payload)
 	printTopicAndPayload("Publish", topic, payload, strlen(payload));
 #endif
 	_mqttClient.publish(topic, (const char*)payload);
-}
-
-/**
-* @brief Connect to WiFi access point.
-*
-* @return bool true - success.
-*/
-bool connectWiFi()
-{
-	if (WiFi.status() != WL_CONNECTED)
-	{
-		DEBUG_FC_PRINT(F("Reconnecting ["));
-		DEBUG_FC_PRINT(WiFi.SSID());
-		DEBUG_FC_PRINTLN(F("]..."));
-
-		WiFi.begin();
-
-		if (WiFi.waitForConnectResult() != WL_CONNECTED)
-		{
-			return false;
-		}
-
-		DEBUG_FC_PRINT(F("IP address: "));
-		DEBUG_FC_PRINTLN(WiFi.localIP());
-	}
-
-	return true;
 }
 
 /**

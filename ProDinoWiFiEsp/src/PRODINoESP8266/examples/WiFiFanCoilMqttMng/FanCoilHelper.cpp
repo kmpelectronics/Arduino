@@ -4,6 +4,33 @@
 
 bool _shouldSaveConfig = false;
 
+/**
+* @brief Connect to WiFi access point.
+*
+* @return bool true - success.
+*/
+bool connectWiFi()
+{
+	if (WiFi.status() != WL_CONNECTED)
+	{
+		DEBUG_FC_PRINT(F("Reconnecting ["));
+		DEBUG_FC_PRINT(WiFi.SSID());
+		DEBUG_FC_PRINTLN(F("]..."));
+
+		WiFi.begin();
+
+		if (WiFi.waitForConnectResult() != WL_CONNECTED)
+		{
+			return false;
+		}
+
+		DEBUG_FC_PRINT(F("IP address: "));
+		DEBUG_FC_PRINTLN(WiFi.localIP());
+	}
+
+	return true;
+}
+
 float calcAverage(float * data, uint8 dataLength, uint8 precision)
 {
 	// Get average value.
@@ -212,6 +239,11 @@ void saveConfigCallback()
 
 void setArrayValues(SensorData * sensor)
 {
+	if (!sensor->IsExist)
+	{
+		return;
+	}
+	
 	for (size_t i = 0; i < sensor->DataCollectionLen; i++)
 	{
 		sensor->DataCollection[i] = sensor->Current;
