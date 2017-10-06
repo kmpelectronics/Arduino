@@ -151,7 +151,7 @@ struct SensorData
 	// DS18B20 device address
 	uint8_t Address[8];
 	// Is true, if the sensor exists
-	bool IsExist;
+	bool IsExists;
 };
 
 #ifdef WIFIFCMM_DEBUG

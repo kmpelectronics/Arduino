@@ -239,7 +239,7 @@ void saveConfigCallback()
 
 void setArrayValues(SensorData * sensor)
 {
-	if (!sensor->IsExist)
+	if (!sensor->IsExists)
 	{
 		return;
 	}
@@ -248,4 +248,6 @@ void setArrayValues(SensorData * sensor)
 	{
 		sensor->DataCollection[i] = sensor->Current;
 	}
+
+	sensor->Average = sensor->Current;
 }
