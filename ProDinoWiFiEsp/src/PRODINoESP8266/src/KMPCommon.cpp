@@ -180,9 +180,10 @@ bool isEqual(const char *strFirst, const char *strSecond, size_t length)
 
 float roundF(float f, uint8_t precision)
 {
-	float rnd = f * (10.0f * precision);
+	
+	float rnd = f * ratio;
 	rnd = (rnd > (floor(rnd) + 0.5f)) ? ceil(rnd) : floor(rnd);
-	rnd = rnd / 10.0f;
+	rnd = rnd / ratio;
 
 	return rnd;
 }
