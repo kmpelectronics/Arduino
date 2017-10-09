@@ -15,7 +15,7 @@
 
 #include "FanCoilHelper.h"
 #include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
-#include "KMPCommon.h"
+#include <KMPCommon.h>
 
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
@@ -23,7 +23,7 @@
 #include <DHT.h>                  // Install with Library Manager. "DHT sensor library by Adafruit" https://github.com/adafruit/DHT-sensor-library
 #include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
 #include <DallasTemperature.h>    // Install with Library Manager. "DallasTemperature by Miles Burton, ..." https://github.com/milesburton/Arduino-Temperature-Control-Library
-#include <OneWire.h>			  // This library Installed together with a DallasTemperature library.
+#include <OneWire.h>			  // Install with Library Manager. "One Wire by Jim Studt, ..."
 
 DeviceSettings _settings;
 
@@ -275,6 +275,7 @@ void setup(void)
 	// Start sensors.
 	_dhtSensor.begin();
 	_oneWireSensors.begin();
+	_oneWireSensors.setResolution(ONEWIRE_TEMPERATURE_PRECISION);
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
@@ -358,12 +359,19 @@ bool getPipesTemperature()
 	{
 		findPipeSensors();
 	}
-
-	if (_inletData.IsExists)
+	else
 	{
-		_inletData.Current = _oneWireSensors.getTempC(_inletData.Address);
-
-		_inletData.IsExists = _inletData.Current != NAN;
+		// Send the command to get temperatures.
+		_oneWireSensors.requestTemperatures();
+		float temp = _oneWireSensors.getTempC(_inletData.Address);
+		if (temp != DEVICE_DISCONNECTED_C)
+		{
+			_inletData.Current = _oneWireSensors.getTempC(_inletData.Address);
+		}
+		else
+		{
+			_inletData.IsExists = std::isnan(_inletData.Current);
+		}
 	}
 
 	return _inletData.IsExists;
@@ -380,7 +388,7 @@ bool setDeviceState(DeviceState state)
 	{
 		shouldBe = Off;
 	}
-	
+
 	_deviceState = shouldBe;
 	publishData(CurrentDeviceState);
 
@@ -478,9 +486,8 @@ uint8_t processFanDegree()
 		pipeDiffTemp = _mode == Cold ? _temperatureData.Average - _inletData.Average /* Cold */ : _inletData.Average - _temperatureData.Average /* Heat */;
 	}
 
-	// TODO: Fix a problem with measure Inlet temperature.
 	// If inlet sensor doesn't exist or difference between inlet pipe temperature and ambient temperature > 5 degree get fan degree.
-	//if (!_inletData.IsExists || pipeDiffTemp >= 5)
+	if (!_inletData.IsExists || pipeDiffTemp >= 5)
 	{
 		int i = FAN_SWITCH_LEVEL_LEN;
 		while (i > 0)
@@ -609,24 +616,12 @@ void findPipeSensors()
 	{
 		DeviceAddress deviceAddress;
 
-		for (uint8_t i = 0; i < pipeSensorCount; i++)
+		bool isExists = _oneWireSensors.getAddress(deviceAddress, 0);
+		_inletData.IsExists = isExists;
+
+		if (isExists)
 		{
-			bool isExists = _oneWireSensors.getAddress(deviceAddress, i);
-			if (i == 0)
-			{
-				// Process only first device
-				_inletData.IsExists = isExists;
-
-				if (isExists)
-				{
-					memcpy(_inletData.Address, deviceAddress, 8);
-				}
-			}
-
-			if (isExists)
-			{
-				_oneWireSensors.setResolution(deviceAddress, ONEWIRE_TEMPERATURE_PRECISION);
-			}
+			memcpy(_inletData.Address, deviceAddress, 8);
 		}
 	}
 }
