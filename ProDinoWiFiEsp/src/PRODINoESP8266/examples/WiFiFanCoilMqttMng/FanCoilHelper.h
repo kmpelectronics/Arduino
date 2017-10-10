@@ -6,7 +6,7 @@
 #include <FS.h>
 #include "Arduino.h"
 #include <ESP8266WiFi.h>
-#include <WiFiManager.h>          // Install with Library Manager. "WiFiManager by tzapu" https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h>
 
 // Uncomment to enable printing out nice debug messages.
 #define WIFIFCMM_DEBUG

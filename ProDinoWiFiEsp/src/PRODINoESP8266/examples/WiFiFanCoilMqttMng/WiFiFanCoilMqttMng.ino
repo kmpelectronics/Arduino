@@ -9,7 +9,8 @@
 //    You should install following libraries:
 //		Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
 // Version: 1.3.0
-// Date: 13.09.2017
+// Start date: 13.09.2017
+// Last version date: 10.10.2017
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include "FanCoilHelper.h"
