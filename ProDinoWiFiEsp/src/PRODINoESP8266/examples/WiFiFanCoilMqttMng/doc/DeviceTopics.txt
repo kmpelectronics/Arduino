@@ -7,8 +7,9 @@ Callback:
  basetopic/state/set:on - set device state [ on | off ]
 
 Publish:
- basetopic/currenttemp:23.5 - current measured temperature
- basetopic/humidity:48.2 - current measured humidity
+ basetopic/temperature:23.5 - current measured temperature [ N/A ] if doesn't sensor exists
+ basetopic/humidity:48.2 - current measured humidity [ N/A ] if doesn't sensor exists
+ basetopic/inlettemp:50 - inlet pipe temperature or [ N/A ] if doesn't sensor exists
  basetopic/fandegree:2 - a current fan speed degree. Degrees: 0 - stopped, 1 - low, 2 - medium, 3 - high
  basetopic/desiredtemp:24.0 - desired temperature
  basetopic/mode:heat - current device mode

@@ -358,8 +358,9 @@ bool getPipesTemperature()
 	if (!_inletData.IsExists)
 	{
 		findPipeSensors();
-	}
-	else
+	};
+
+	if (_inletData.IsExists)
 	{
 		// Send the command to get temperatures.
 		_oneWireSensors.requestTemperatures();
@@ -370,7 +371,7 @@ bool getPipesTemperature()
 		}
 		else
 		{
-			_inletData.IsExists = std::isnan(_inletData.Current);
+			_inletData.IsExists = false;
 		}
 	}
 
@@ -397,8 +398,11 @@ bool setDeviceState(DeviceState state)
 
 void processDHTStatus(bool isExists)
 {
+	bool sendData = false;
+
 	if (isExists)
 	{
+		sendData = !_isDHTExists;
 		_isDHTExists = true;
 		if (_deviceState != _lastDeviceState)
 		{
@@ -409,20 +413,30 @@ void processDHTStatus(bool isExists)
 	{
 		if (_isDHTExists)
 		{
-			// TODO: Maybe send an error
 			_isDHTExists = false;
 			_lastDeviceState = _deviceState;
+			// TODO: Maybe send an error
+			sendData = true;
 			// Turn off a device
 			setDeviceState(Off);
 		}
+	}
+
+	if (sendData)
+	{
+		publishData(DeviceData(Temperature | Humidity));
 	}
 }
 
 void processDS18B20Status(bool isExists)
 {
+	bool sendData = false;
+
 	if (isExists)
 	{
+		sendData = !_isDS18b20Exists;
 		_isDS18b20Exists = true;
+
 	}
 	else
 	{
@@ -430,7 +444,13 @@ void processDS18B20Status(bool isExists)
 		{
 			// TODO: Maybe send warning
 			_isDS18b20Exists = false;
+			sendData = true;
 		}
+	}
+
+	if (sendData)
+	{
+		publishData(InletPipe);
 	}
 }
 
