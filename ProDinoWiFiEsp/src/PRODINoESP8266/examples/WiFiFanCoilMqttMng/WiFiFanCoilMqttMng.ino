@@ -8,10 +8,9 @@
 // Prerequisites: 
 //    You should install following libraries:
 //		Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
-// Version: 0.0.1
+// Version: 1.3.0
 // Date: 13.09.2017
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-// Attention: The project has not finished yet!
 
 #include "FanCoilHelper.h"
 #include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
