@@ -274,8 +274,8 @@ void setup(void)
 
 	// Start sensors.
 	_dhtSensor.begin();
-	_oneWireSensors.begin();
-	_oneWireSensors.setResolution(ONEWIRE_TEMPERATURE_PRECISION);
+	//_oneWireSensors.begin();
+	//_oneWireSensors.setResolution(ONEWIRE_TEMPERATURE_PRECISION);
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
@@ -631,6 +631,9 @@ char* valueToStr(SensorData* sensorData, bool sendCurrent)
 
 void findPipeSensors()
 {
+	_oneWireSensors.begin();
+	_oneWireSensors.setResolution(ONEWIRE_TEMPERATURE_PRECISION);
+
 	uint8_t pipeSensorCount = _oneWireSensors.getDeviceCount();
 	if (pipeSensorCount > 0)
 	{
