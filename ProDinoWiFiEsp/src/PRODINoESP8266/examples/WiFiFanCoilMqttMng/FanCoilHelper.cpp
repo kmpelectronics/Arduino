@@ -2,6 +2,15 @@
 #include "KMPCommon.h"
 #include <ArduinoJson.h>          // Install with Library Manager. "ArduinoJson by Benoit Blanchon" https://github.com/bblanchon/ArduinoJson
 
+SensorData TemperatureData;
+float TempCollection[TEMPERATURE_ARRAY_LEN];
+
+SensorData HumidityData;
+float HumidityCollection[HUMIDITY_ARRAY_LEN];
+
+SensorData InletData;
+float InletCollection[INLET_ARRAY_LEN];
+
 bool _shouldSaveConfig = false;
 
 /**
@@ -250,4 +259,25 @@ void setArrayValues(SensorData * sensor)
 	}
 
 	sensor->Average = sensor->Current;
+}
+
+void initializeSensorData()
+{
+	TemperatureData.DataCollection = TempCollection;
+	TemperatureData.DataCollectionLen = TEMPERATURE_ARRAY_LEN;
+	TemperatureData.Precision = TEMPERATURE_PRECISION;
+	TemperatureData.CheckDataIntervalMS = CHECK_TEMP_INTERVAL_MS;
+	TemperatureData.DataType = Temperature;
+
+	HumidityData.DataCollection = HumidityCollection;
+	HumidityData.DataCollectionLen = HUMIDITY_ARRAY_LEN;
+	HumidityData.Precision = HUMIDITY_PRECISION;
+	HumidityData.CheckDataIntervalMS = CHECK_HUMIDITY_INTERVAL_MS;
+	HumidityData.DataType = Humidity;
+
+	InletData.DataCollection = InletCollection;
+	InletData.DataCollectionLen = INLET_ARRAY_LEN;
+	InletData.Precision = INLET_PRECISION;
+	InletData.CheckDataIntervalMS = CHECK_INLET_INTERVAL_MS;
+	InletData.DataType = InletPipe;
 }

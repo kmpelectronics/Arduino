@@ -47,6 +47,9 @@
 
 #define PING_INTERVAL_MS 30000
 
+#define BYPASS_CHANGE_STATE_INTERVAL_MS 10000
+#define BYPASS_ON_MIN_ANTI_FREEZE_TEMPERTURE 7.0
+
 #define MIN_DIFFERENCE_TEMPERATURE 5
 
 #define MIN_DESIRED_TEMPERATURE 15.0
@@ -73,6 +76,7 @@ const char CONFIG_FILE_NAME[] = "/config.json";
 const char TOPIC_SEPARATOR[] = "/";
 const char TOPIC_HUMIDITY[] = "humidity";
 const char TOPIC_DESIRED_TEMPERATURE[] = "desiredtemp";
+const char TOPIC_BYPASS_STATE[] = "bypassstate";
 const char TOPIC_TEMPERATURE[] = "temperature";
 const char TOPIC_SET[] = "set";
 const char TOPIC_MODE[] = "mode";
@@ -154,6 +158,16 @@ struct SensorData
 	bool IsExists;
 };
 
+extern SensorData TemperatureData;
+extern float TempCollection[];
+
+extern SensorData HumidityData;
+extern float HumidityCollection[];
+
+extern SensorData InletData;
+extern float InletCollection[];
+
+
 #ifdef WIFIFCMM_DEBUG
 void printTopicAndPayload(const char* operationName, const char* topic, char* payload, unsigned int length);
 #endif
@@ -168,5 +182,7 @@ void SaveConfiguration(DeviceSettings* settings);
 void saveConfigCallback();
 
 void setArrayValues(SensorData* sensor);
+
+void initializeSensorData();
 
 #endif

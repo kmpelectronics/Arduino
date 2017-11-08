@@ -39,14 +39,8 @@ char _topicBuff[128];
 char _payloadBuff[32];
 
 float _desiredTemperature = 22.0;
-SensorData _temperatureData;
-float _tempCollection[TEMPERATURE_ARRAY_LEN];
 
-SensorData _humidityData;
-float _humidityCollection[HUMIDITY_ARRAY_LEN];
-
-SensorData _inletData;
-float _inletCollection[INLET_ARRAY_LEN];
+DeviceState _bypassState = Off;
 
 uint8_t _fanDegree = 0;
 Mode _mode = Cold;
@@ -58,27 +52,6 @@ bool _isConnected = false;
 bool _isStarted = false;
 bool _isDHTExists = true;
 bool _isDS18b20Exists = true;
-
-void initializeSensorData()
-{
-	_temperatureData.DataCollection = _tempCollection;
-	_temperatureData.DataCollectionLen = TEMPERATURE_ARRAY_LEN;
-	_temperatureData.Precision = TEMPERATURE_PRECISION;
-	_temperatureData.CheckDataIntervalMS = CHECK_TEMP_INTERVAL_MS;
-	_temperatureData.DataType = Temperature;
-
-	_humidityData.DataCollection = _humidityCollection;
-	_humidityData.DataCollectionLen = HUMIDITY_ARRAY_LEN;
-	_humidityData.Precision = HUMIDITY_PRECISION;
-	_humidityData.CheckDataIntervalMS = CHECK_HUMIDITY_INTERVAL_MS;
-	_humidityData.DataType = Humidity;
-
-	_inletData.DataCollection = _inletCollection;
-	_inletData.DataCollectionLen = INLET_ARRAY_LEN;
-	_inletData.Precision = INLET_PRECISION;
-	_inletData.CheckDataIntervalMS = CHECK_INLET_INTERVAL_MS;
-	_inletData.DataType = InletPipe;
-}
 
 void publishData(DeviceData deviceData, bool sendCurrent = false)
 {
@@ -93,21 +66,21 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_TEMPERATURE);
 
-		mqttPublish(_topicBuff, valueToStr(&_temperatureData, sendCurrent));
+		mqttPublish(_topicBuff, valueToStr(&TemperatureData, sendCurrent));
 	}
 
 	if (CHECK_ENUM(deviceData, Humidity))
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_HUMIDITY);
 
-		mqttPublish(_topicBuff, valueToStr(&_humidityData, sendCurrent));
+		mqttPublish(_topicBuff, valueToStr(&HumidityData, sendCurrent));
 	}
 
 	if (CHECK_ENUM(deviceData, InletPipe))
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_INLET_TEMPERATURE);
 
-		mqttPublish(_topicBuff, valueToStr(&_inletData, sendCurrent));
+		mqttPublish(_topicBuff, valueToStr(&InletData, sendCurrent));
 	}
 
 	if (CHECK_ENUM(deviceData, FanDegree))
@@ -164,7 +137,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 #ifdef WIFIFCMM_DEBUG
 	printTopicAndPayload("Call back", topic, (char*)payload, length);
 #endif
-	// TODO Check
+
 	size_t baseTopicLen = strlen(_settings.BaseTopic);
 
 	if (!startsWith(topic, _settings.BaseTopic))
@@ -274,8 +247,6 @@ void setup(void)
 
 	// Start sensors.
 	_dhtSensor.begin();
-	//_oneWireSensors.begin();
-	//_oneWireSensors.setResolution(ONEWIRE_TEMPERATURE_PRECISION);
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
@@ -314,14 +285,14 @@ void loop(void)
 
 	if (!_isStarted)
 	{
-		setArrayValues(&_temperatureData);
-		setArrayValues(&_humidityData);
-		setArrayValues(&_inletData);
+		setArrayValues(&TemperatureData);
+		setArrayValues(&HumidityData);
+		setArrayValues(&InletData);
 	}
 
-	processData(&_temperatureData);
-	processData(&_humidityData);
-	processData(&_inletData);
+	processData(&TemperatureData);
+	processData(&HumidityData);
+	processData(&InletData);
 
 	uint8_t degree = processFanDegree();
 	setFanDegree(degree);
@@ -343,39 +314,39 @@ bool getTemperatureAndHumidity()
 	bool result = _dhtSensor.read();
 	if (result)
 	{
-		_temperatureData.Current = _dhtSensor.readTemperature();
-		_humidityData.Current = _dhtSensor.readHumidity();
+		TemperatureData.Current = _dhtSensor.readTemperature();
+		HumidityData.Current = _dhtSensor.readHumidity();
 	}
 
-	_temperatureData.IsExists = result;
-	_humidityData.IsExists = result;
+	TemperatureData.IsExists = result;
+	HumidityData.IsExists = result;
 
 	return result;
 }
 
 bool getPipesTemperature()
 {
-	if (!_inletData.IsExists)
+	if (!InletData.IsExists)
 	{
 		findPipeSensors();
 	};
 
-	if (_inletData.IsExists)
+	if (InletData.IsExists)
 	{
 		// Send the command to get temperatures.
 		_oneWireSensors.requestTemperatures();
-		float temp = _oneWireSensors.getTempC(_inletData.Address);
+		float temp = _oneWireSensors.getTempC(InletData.Address);
 		if (temp != DEVICE_DISCONNECTED_C)
 		{
-			_inletData.Current = _oneWireSensors.getTempC(_inletData.Address);
+			InletData.Current = _oneWireSensors.getTempC(InletData.Address);
 		}
 		else
 		{
-			_inletData.IsExists = false;
+			InletData.IsExists = false;
 		}
 	}
 
-	return _inletData.IsExists;
+	return InletData.IsExists;
 }
 
 /**
@@ -491,7 +462,7 @@ uint8_t processFanDegree()
 		return degree;
 	}
 
-	float diffTemp = _mode == Cold ? _temperatureData.Average - _desiredTemperature /* Cold */ : _desiredTemperature - _temperatureData.Average /* Heat */;
+	float diffTemp = _mode == Cold ? TemperatureData.Average - _desiredTemperature /* Cold */ : _desiredTemperature - TemperatureData.Average /* Heat */;
 
 	// Bypass the fan coil.
 	if (diffTemp < -1.0)
@@ -501,13 +472,13 @@ uint8_t processFanDegree()
 
 	float pipeDiffTemp;
 
-	if (_inletData.IsExists)
+	if (InletData.IsExists)
 	{
-		pipeDiffTemp = _mode == Cold ? _temperatureData.Average - _inletData.Average /* Cold */ : _inletData.Average - _temperatureData.Average /* Heat */;
+		pipeDiffTemp = _mode == Cold ? TemperatureData.Average - InletData.Average /* Cold */ : InletData.Average - TemperatureData.Average /* Heat */;
 	}
 
 	// If inlet sensor doesn't exist or difference between inlet pipe temperature and ambient temperature > 5 degree get fan degree.
-	if (!_inletData.IsExists || pipeDiffTemp >= 5)
+	if (!InletData.IsExists || pipeDiffTemp >= 5)
 	{
 		int i = FAN_SWITCH_LEVEL_LEN;
 		while (i > 0)
@@ -640,11 +611,11 @@ void findPipeSensors()
 		DeviceAddress deviceAddress;
 
 		bool isExists = _oneWireSensors.getAddress(deviceAddress, 0);
-		_inletData.IsExists = isExists;
+		InletData.IsExists = isExists;
 
 		if (isExists)
 		{
-			memcpy(_inletData.Address, deviceAddress, 8);
+			memcpy(InletData.Address, deviceAddress, 8);
 		}
 	}
 }
