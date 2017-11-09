@@ -41,6 +41,8 @@ char _payloadBuff[32];
 float _desiredTemperature = 22.0;
 
 DeviceState _bypassState = Off;
+bool _bypassStateIsChanging = false;
+unsigned long _bypassChangeStateInterval;
 
 uint8_t _fanDegree = 0;
 Mode _mode = Cold;
@@ -253,6 +255,12 @@ void setup(void)
 	uint16_t port = atoi(_settings.MqttPort);
 	_mqttClient.setServer(_settings.MqttServer, port);
 	_mqttClient.setCallback(callback);
+
+	FunCoilHelper.SetExpanderDirection(BYPASS_OFF_PIN, OUTPUT);
+	FunCoilHelper.SetExpanderDirection(BYPASS_ON_PIN, OUTPUT);
+	// Switch off bypass.
+	_bypassState = On;
+	setBypassState(Off);
 }
 
 /**
@@ -465,7 +473,7 @@ uint8_t processFanDegree()
 	float diffTemp = _mode == Cold ? TemperatureData.Average - _desiredTemperature /* Cold */ : _desiredTemperature - TemperatureData.Average /* Heat */;
 
 	// Bypass the fan coil.
-	if (diffTemp < -1.0)
+	if (diffTemp > BYPASS_OFF_TEMPERTURE_DIFFERENCE)
 	{
 		// TODO: Add bypass logic.
 	}
@@ -494,9 +502,10 @@ uint8_t processFanDegree()
 	return degree;
 }
 
-/*
-* A fan degree: 0 - stopped, 1 - low fan speed, 2 - medium, 3 - high
-*/
+/**
+* @breef: Setting the degree of fun.
+* The degrees: 0 - stopped, 1 - low fan speed, 2 - medium, 3 - high
+**/
 void setFanDegree(uint8_t degree)
 {
 	if (degree == _fanDegree)
@@ -535,10 +544,46 @@ void setDesiredTemperature(float temp)
 	}
 }
 
+void setBypassState(DeviceState state)
+{
+	if (state == _bypassState && !_bypassStateIsChanging)
+	{
+		return;
+	}
+
+	// TODO: Must be finished
+	if (!_bypassStateIsChanging)
+	{
+		_bypassStateIsChanging = true;
+		_bypassChangeStateInterval = millis() + BYPASS_CHANGE_STATE_INTERVAL_MS;
+
+		setBypassPin(state, true);
+	}
+	else
+	{
+		if (true)
+		{
+
+		}
+	}
+}
+
+void setBypassPin(DeviceState state, bool isEnable)
+{
+	if (state == On)
+	{
+		FunCoilHelper.SetExpanderPin(BYPASS_ON_PIN, isEnable);
+	}
+	else
+	{
+		FunCoilHelper.SetExpanderPin(BYPASS_OFF_PIN, isEnable);
+	}
+}
+
 /**
 * @brief Publish topic.
 * @param topic A topic title.
-* @param payload A data to send.
+* @param payload Data to send.
 *
 * @return void
 */
