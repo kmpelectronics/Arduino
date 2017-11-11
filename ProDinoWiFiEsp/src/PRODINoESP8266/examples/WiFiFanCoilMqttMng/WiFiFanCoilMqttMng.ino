@@ -41,6 +41,7 @@ char _payloadBuff[32];
 float _desiredTemperature = 22.0;
 
 DeviceState _bypassState = Off;
+DeviceState _bypassNewState = Off;
 bool _bypassStateIsChanging = false;
 unsigned long _bypassChangeStateInterval;
 
@@ -115,6 +116,15 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_DEVICE_STATE);
 
 		const char * mode = _deviceState == On ? PAYLOAD_ON : PAYLOAD_OFF;
+
+		mqttPublish(_topicBuff, (char*)mode);
+	}
+
+	if (CHECK_ENUM(deviceData, BypassState))
+	{
+		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_BYPASS_STATE);
+
+		const char * mode = _bypassState == On ? PAYLOAD_ON : PAYLOAD_OFF;
 
 		mqttPublish(_topicBuff, (char*)mode);
 	}
@@ -315,6 +325,8 @@ void loop(void)
 		_isStarted = true;
 		publishData(DeviceIsReady);
 	}
+
+	processByPassState();
 }
 
 bool getTemperatureAndHumidity()
@@ -475,7 +487,12 @@ uint8_t processFanDegree()
 	// Bypass the fan coil.
 	if (diffTemp > BYPASS_OFF_TEMPERTURE_DIFFERENCE)
 	{
-		// TODO: Add bypass logic.
+		setBypassState(Off);
+	}
+
+	if (diffTemp < BYPASS_ON_TEMPERTURE_DIFFERENCE)
+	{
+		setBypassState(On);
 	}
 
 	float pipeDiffTemp;
@@ -503,7 +520,7 @@ uint8_t processFanDegree()
 }
 
 /**
-* @breef: Setting the degree of fun.
+* @brief: Setting the degree of fun.
 * The degrees: 0 - stopped, 1 - low fan speed, 2 - medium, 3 - high
 **/
 void setFanDegree(uint8_t degree)
@@ -544,27 +561,44 @@ void setDesiredTemperature(float temp)
 	}
 }
 
+/**
+* @brief Set bypass new state. 
+* @param state new state of the bypass
+*
+* @return void
+**/
+// TODO: Add execute this method in appropriate methods
 void setBypassState(DeviceState state)
 {
-	if (state == _bypassState && !_bypassStateIsChanging)
+	if (state == _bypassState || _bypassStateIsChanging)
 	{
 		return;
 	}
 
-	// TODO: Must be finished
+	// Start bypass state changing
+	_bypassNewState = state;
+
+	_bypassStateIsChanging = true;
+	_bypassChangeStateInterval = millis() + BYPASS_CHANGE_STATE_INTERVAL_MS;
+
+	setBypassPin(_bypassNewState, true);
+}
+
+void processByPassState()
+{
 	if (!_bypassStateIsChanging)
 	{
-		_bypassStateIsChanging = true;
-		_bypassChangeStateInterval = millis() + BYPASS_CHANGE_STATE_INTERVAL_MS;
-
-		setBypassPin(state, true);
+		return;
 	}
-	else
-	{
-		if (true)
-		{
 
-		}
+	// End bypass state changing.
+	if (_bypassChangeStateInterval < millis())
+	{
+		_bypassStateIsChanging = false;
+		_bypassState = _bypassNewState;
+
+		setBypassPin(_bypassNewState, false);
+		publishData(BypassState);
 	}
 }
 
@@ -667,7 +701,8 @@ void findPipeSensors()
 
 void publishAllData()
 {
-	DeviceData deviceData = (DeviceData)(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity | InletPipe);
+	DeviceData deviceData = (DeviceData)
+		(Temperature | DesiredTemp | FanDegree | CurrentMode | CurrentDeviceState | Humidity | InletPipe | BypassState);
 	publishData(deviceData, false);
 }
 

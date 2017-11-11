@@ -51,6 +51,7 @@
 #define BYPASS_CHANGE_STATE_INTERVAL_MS 10000
 #define BYPASS_ON_MIN_ANTI_FREEZE_TEMPERTURE 7.0
 #define BYPASS_OFF_TEMPERTURE_DIFFERENCE -1.0
+#define BYPASS_ON_TEMPERTURE_DIFFERENCE -0.2
 #define BYPASS_OFF_PIN 0x00 // IN1PIN
 #define BYPASS_ON_PIN 0x01  // IN2PIN
 
@@ -123,7 +124,8 @@ enum DeviceData
 	CurrentDeviceState = 32,
 	Humidity = 64,
 	DeviceIsReady = 128,
-	DevicePing = 256
+	DevicePing = 256,
+	BypassState = 512
 };
 
 struct DeviceSettings
