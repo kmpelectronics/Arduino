@@ -13,8 +13,6 @@ float InletCollection[INLET_ARRAY_LEN];
 
 bool _shouldSaveConfig = false;
 
-FunCoilHelperClass FunCoilHelper;
-
 /**
 * @brief Connect to WiFi access point.
 *
@@ -282,14 +280,4 @@ void initializeSensorData()
 	InletData.Precision = INLET_PRECISION;
 	InletData.CheckDataIntervalMS = CHECK_INLET_INTERVAL_MS;
 	InletData.DataType = InletPipe;
-}
-
-void FunCoilHelperClass::SetExpanderDirection(uint8_t pinNumber, uint8_t mode)
-{
-	ExpanderSetDirection(pinNumber, mode);
-}
-
-void FunCoilHelperClass::SetExpanderPin(uint8_t pinNumber, bool state)
-{
-	ExpanderSetDirection(pinNumber, state);
 }

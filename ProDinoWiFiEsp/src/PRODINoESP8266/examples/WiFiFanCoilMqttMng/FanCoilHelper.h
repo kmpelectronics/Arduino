@@ -7,7 +7,6 @@
 #include "Arduino.h"
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
-#include <KMPDinoWiFiESP.h>
 
 // Uncomment to enable printing out nice debug messages.
 #define WIFIFCMM_DEBUG
@@ -47,13 +46,6 @@
 #define CHECK_INLET_INTERVAL_MS CHECK_TEMP_INTERVAL_MS
 
 #define PING_INTERVAL_MS 30000
-
-#define BYPASS_CHANGE_STATE_INTERVAL_MS 10000
-#define BYPASS_ON_MIN_ANTI_FREEZE_TEMPERTURE 7.0
-#define BYPASS_OFF_TEMPERTURE_DIFFERENCE -1.0
-#define BYPASS_ON_TEMPERTURE_DIFFERENCE -0.2
-#define BYPASS_OFF_PIN 0x00 // IN1PIN
-#define BYPASS_ON_PIN 0x01  // IN2PIN
 
 #define MIN_DIFFERENCE_TEMPERATURE 5
 
@@ -190,14 +182,5 @@ void saveConfigCallback();
 void setArrayValues(SensorData* sensor);
 
 void initializeSensorData();
-
-class FunCoilHelperClass : private KMPDinoWiFiESPClass
-{
- public:
-	void SetExpanderDirection(uint8_t pinNumber, uint8_t mode);
-	void SetExpanderPin(uint8_t pinNumber, bool state);
-};
-
-extern FunCoilHelperClass FunCoilHelper;
 
 #endif

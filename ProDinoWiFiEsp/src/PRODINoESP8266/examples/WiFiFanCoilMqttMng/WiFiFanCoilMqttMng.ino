@@ -13,6 +13,7 @@
 // Last version date: 10.10.2017
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
+#include "FanCoilBypass.h"
 #include "FanCoilHelper.h"
 #include <KMPDinoWiFiESP.h>       // Our library. https://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/howtoinstall.aspx
 #include <KMPCommon.h>
@@ -39,11 +40,6 @@ char _topicBuff[128];
 char _payloadBuff[32];
 
 float _desiredTemperature = 22.0;
-
-DeviceState _bypassState = Off;
-DeviceState _bypassNewState = Off;
-bool _bypassStateIsChanging = false;
-unsigned long _bypassChangeStateInterval;
 
 uint8_t _fanDegree = 0;
 Mode _mode = Cold;
@@ -124,7 +120,7 @@ void publishData(DeviceData deviceData, bool sendCurrent = false)
 	{
 		strConcatenate(_topicBuff, 3, _settings.BaseTopic, TOPIC_SEPARATOR, TOPIC_BYPASS_STATE);
 
-		const char * mode = _bypassState == On ? PAYLOAD_ON : PAYLOAD_OFF;
+		const char * mode = FanCoilBypass.state() == On ? PAYLOAD_ON : PAYLOAD_OFF;
 
 		mqttPublish(_topicBuff, (char*)mode);
 	}
@@ -266,11 +262,9 @@ void setup(void)
 	_mqttClient.setServer(_settings.MqttServer, port);
 	_mqttClient.setCallback(callback);
 
-	FunCoilHelper.SetExpanderDirection(BYPASS_OFF_PIN, OUTPUT);
-	FunCoilHelper.SetExpanderDirection(BYPASS_ON_PIN, OUTPUT);
 	// Switch off bypass.
-	_bypassState = On;
-	setBypassState(Off);
+	FanCoilBypass.init(&publishData);
+	FanCoilBypass.setBypassState(Off, true);
 }
 
 /**
@@ -326,7 +320,7 @@ void loop(void)
 		publishData(DeviceIsReady);
 	}
 
-	processByPassState();
+	FanCoilBypass.processByPassState();
 }
 
 bool getTemperatureAndHumidity()
@@ -479,20 +473,27 @@ uint8_t processFanDegree()
 
 	if (_deviceState == Off)
 	{
+		// Urgent antifreeze bypass action.
+		if (TemperatureData.Average < BYPASS_ON_MIN_ANTI_FREEZE_TEMPERTURE)
+		{
+			FanCoilBypass.setBypassState(On);
+		}
+
 		return degree;
 	}
 
 	float diffTemp = _mode == Cold ? TemperatureData.Average - _desiredTemperature /* Cold */ : _desiredTemperature - TemperatureData.Average /* Heat */;
 
 	// Bypass the fan coil.
-	if (diffTemp > BYPASS_OFF_TEMPERTURE_DIFFERENCE)
+	if (diffTemp - BYPASS_OFF_TEMPERTURE_DIFFERENCE <= 0.0)
 	{
-		setBypassState(Off);
+		FanCoilBypass.setBypassState(Off);
 	}
 
-	if (diffTemp < BYPASS_ON_TEMPERTURE_DIFFERENCE)
+	// Release bypass.
+	if (diffTemp - BYPASS_ON_TEMPERTURE_DIFFERENCE >= 0.0)
 	{
-		setBypassState(On);
+		FanCoilBypass.setBypassState(On);
 	}
 
 	float pipeDiffTemp;
@@ -558,59 +559,6 @@ void setDesiredTemperature(float temp)
 			_desiredTemperature = roundTemp;
 		}
 		publishData(DesiredTemp);
-	}
-}
-
-/**
-* @brief Set bypass new state. 
-* @param state new state of the bypass
-*
-* @return void
-**/
-// TODO: Add execute this method in appropriate methods
-void setBypassState(DeviceState state)
-{
-	if (state == _bypassState || _bypassStateIsChanging)
-	{
-		return;
-	}
-
-	// Start bypass state changing
-	_bypassNewState = state;
-
-	_bypassStateIsChanging = true;
-	_bypassChangeStateInterval = millis() + BYPASS_CHANGE_STATE_INTERVAL_MS;
-
-	setBypassPin(_bypassNewState, true);
-}
-
-void processByPassState()
-{
-	if (!_bypassStateIsChanging)
-	{
-		return;
-	}
-
-	// End bypass state changing.
-	if (_bypassChangeStateInterval < millis())
-	{
-		_bypassStateIsChanging = false;
-		_bypassState = _bypassNewState;
-
-		setBypassPin(_bypassNewState, false);
-		publishData(BypassState);
-	}
-}
-
-void setBypassPin(DeviceState state, bool isEnable)
-{
-	if (state == On)
-	{
-		FunCoilHelper.SetExpanderPin(BYPASS_ON_PIN, isEnable);
-	}
-	else
-	{
-		FunCoilHelper.SetExpanderPin(BYPASS_OFF_PIN, isEnable);
 	}
 }
 
