@@ -230,6 +230,8 @@ void setup(void)
 	// Init KMP ProDino WiFi-ESP board.
 	KMPDinoWiFiESP.init();
 	KMPDinoWiFiESP.SetAllRelaysOff();
+	// Init bypass.
+	FanCoilBypass.init(&publishData);
 
 	DEBUG_FC_PRINTLN(F("KMP fan coil management with Mqtt.\r\n"));
 
@@ -263,7 +265,6 @@ void setup(void)
 	_mqttClient.setCallback(callback);
 
 	// Switch off bypass.
-	FanCoilBypass.init(&publishData);
 	FanCoilBypass.setBypassState(Off, true);
 }
 
