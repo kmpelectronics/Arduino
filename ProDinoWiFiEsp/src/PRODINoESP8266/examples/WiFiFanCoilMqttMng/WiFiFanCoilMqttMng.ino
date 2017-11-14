@@ -485,13 +485,13 @@ uint8_t processFanDegree()
 
 	float diffTemp = _mode == Cold ? TemperatureData.Average - _desiredTemperature /* Cold */ : _desiredTemperature - TemperatureData.Average /* Heat */;
 
-	// Bypass the fan coil.
+	// Bypass the fan coil - Off.
 	if (diffTemp - BYPASS_OFF_TEMPERTURE_DIFFERENCE <= 0.0)
 	{
 		FanCoilBypass.setBypassState(Off);
 	}
 
-	// Release bypass.
+	// Release bypass - On.
 	if (diffTemp - BYPASS_ON_TEMPERTURE_DIFFERENCE >= 0.0)
 	{
 		FanCoilBypass.setBypassState(On);
