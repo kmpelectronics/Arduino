@@ -479,6 +479,12 @@ uint8_t processFanDegree()
 		{
 			FanCoilBypass.setBypassState(On);
 		}
+		
+		// Release antifreeze bypass action.
+		if (TemperatureData.Average > BYPASS_OFF_MIN_ANTI_FREEZE_TEMPERTURE)
+		{
+			FanCoilBypass.setBypassState(Off);
+		}
 
 		return degree;
 	}
