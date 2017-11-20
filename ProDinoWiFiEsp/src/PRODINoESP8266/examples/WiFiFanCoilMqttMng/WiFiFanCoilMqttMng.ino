@@ -284,6 +284,7 @@ void loop(void)
 		setDeviceState(Off);
 		uint8_t degree = processFanDegree();
 		setFanDegree(degree);
+		FanCoilBypass.processByPassState();
 
 		return;
 	}
