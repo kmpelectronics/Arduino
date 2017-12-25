@@ -9,6 +9,7 @@
 #include <WiFiManager.h>
 
 // Uncomment to enable printing out nice debug messages.
+// TODO: Debug is stopped.
 #define WIFIFCMM_DEBUG
 
 // Define where debug output will be printed.

@@ -87,7 +87,11 @@ void copyJsonValue(char* s, const char* jsonValue)
 		s[0] = '\0';
 	}
 
-	strncpy(s, jsonValue, strlen(jsonValue));
+	size_t len = strlen(jsonValue);
+
+	strncpy(s, jsonValue, len);
+
+	s[len] = '\0';
 }
 
 void ReadConfiguration(DeviceSettings* settings)

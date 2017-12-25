@@ -260,9 +260,6 @@ void setup(void)
 
 	// Initialize MQTT.
 	_mqttClient.setClient(_wifiClient);
-	uint16_t port = atoi(_settings.MqttPort);
-	_mqttClient.setServer(_settings.MqttServer, port);
-	_mqttClient.setCallback(callback);
 
 	// Switch off bypass.
 	FanCoilBypass.setBypassState(Off, true);
@@ -594,7 +591,23 @@ bool connectMqtt()
 {
 	if (!_mqttClient.connected())
 	{
-		DEBUG_FC_PRINTLN(F("Attempting MQTT connection..."));
+		DEBUG_FC_PRINTLN(F("Trying to MQTT connect..."));
+
+		uint16_t port = atoi(_settings.MqttPort);
+		_mqttClient.setServer(_settings.MqttServer, port);
+		_mqttClient.setCallback(callback);
+
+		DEBUG_FC_PRINT(F("Server: \""));
+		DEBUG_FC_PRINT(_settings.MqttServer);
+		DEBUG_FC_PRINT(F("\"\r\nPort:\""));
+		DEBUG_FC_PRINT(_settings.MqttPort);
+		DEBUG_FC_PRINT(F("\"\r\nClientId:\""));
+		DEBUG_FC_PRINT(_settings.MqttClientId);
+		DEBUG_FC_PRINT(F("\"\r\nUser:\""));
+		DEBUG_FC_PRINT(_settings.MqttUser);
+		DEBUG_FC_PRINT(F("\"\r\nPassword:\""));
+		DEBUG_FC_PRINT(_settings.MqttPass);
+		DEBUG_FC_PRINTLN(F("\""));
 
 		if (_mqttClient.connect(_settings.MqttClientId, _settings.MqttUser, _settings.MqttPass))
 		{
