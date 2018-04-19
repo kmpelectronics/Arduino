@@ -9,8 +9,8 @@
 // Date: 15.03.2017
 // Authors: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
-#ifndef _KMPDINOZEROETH_H
-#define _KMPDINOZEROETH_H
+#ifndef _KMPPRODINOMKRZERO_H
+#define _KMPPRODINOMKRZERO_H
 
 #include <Arduino.h>
 #include <Ethernet2.h>
@@ -22,29 +22,9 @@
 
 /**
  * @brief Grove 1 connector
- * @inf   The pin 20 is same for GROVE1_D1 and UEXT_6.
- *		  The pin 21 is same for GROVE1_D2 and UEXT_5.
  */
-#define	GROVE1_D1	0x14 // 20 SDA PA22
-#define	GROVE1_D2	0x15 // 21 SCL PA23
-
-/**
- * @brief Grove 2 connector
- */
-#define	GROVE2_A1	0x0E // 14 A0 PA02
-#define	GROVE2_A2	0x0F // 15 A1 PB08
-
- /**
-  * @brief UEXT connector
-  */
-#define	UEXT_3  0x01 // 1 <- TX PA10          
-#define	UEXT_4  0x00 // 0 -> RX PA11
-#define	UEXT_5  0x15 // 21 SCL PA23
-#define	UEXT_6  0x14 // 20 SDA PA22
-#define	UEXT_7  0x16 // 22 SPI1 PA12 MISO
-#define	UEXT_8  0x17 // 23 SPI4 PB10 MOSI
-#define	UEXT_9  0x18 // 24 SPI3 PB11 SCK
-#define	UEXT_10 0x03 // 3 PA09 CS
+#define	GROVE_D0	12 // PA09
+#define	GROVE_D1	11 // PA08
 
 /**
  * @brief Relays.
@@ -67,10 +47,10 @@ enum OptoIn {
 };
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
-const char PRODINO_ZERO_ETH[] = "ProDino Zero Eth";
+const char PRODINO_ZERO_ETH[] = "ProDino Zero";
 const char URL_KMPELECTRONICS_EU_DINO_ZERO[] = "http://www.kmpelectronics.eu/en-us/products/prodinozero-eth.aspx";
 
-class KMPDinoZeroEthClass
+class KMPProDinoMKRZeroClass
 {
  public:
 	void init();
@@ -101,6 +81,6 @@ class KMPDinoZeroEthClass
 	int RS485Read(unsigned long delayWait, uint8_t repeatTime);
 };
 
-extern KMPDinoZeroEthClass KMPDinoZeroEth;
+extern KMPProDinoMKRZeroClass KMPProDinoMKRZero;
 
 #endif

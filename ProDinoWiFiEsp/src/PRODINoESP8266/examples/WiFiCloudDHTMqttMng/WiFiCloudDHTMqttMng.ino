@@ -242,7 +242,8 @@ void publishDHTSensorData(bool isForceSend)
 		{
 			_dht[0] = humidity;
 			FloatToChars(humidity, 1, _payload);
-			strConcatenate(_topic, 3, MAIN_TOPIC, TOPIC_SEPARATOR, HUMIDITY_SENSOR); // kmp/prodinowifi/humidity
+			// kmp/prodinowifi/humidity
+			strConcatenate(_topic, 3, MAIN_TOPIC, TOPIC_SEPARATOR, HUMIDITY_SENSOR); 
 			publish(_topic, _payload);
 		}
 
@@ -250,7 +251,8 @@ void publishDHTSensorData(bool isForceSend)
 		{
 			_dht[1] = temperature;
 			FloatToChars(temperature, 1, _payload);
-			strConcatenate(_topic, 3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); // kmp/prodinowifi/temperature
+			// kmp/prodinowifi/temperature
+			strConcatenate(_topic, 3, MAIN_TOPIC, TOPIC_SEPARATOR, TEMPERATURE_SENSOR); 
 			publish(_topic, _payload);
 		}
 

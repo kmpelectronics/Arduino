@@ -1,16 +1,16 @@
-// License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
+// EthWebRelay.ino
+// Company: KMP Electronics Ltd, Bulgaria
+// Web: http://kmpelectronics.eu/
 // Supported boards:
-//		KMP DiNo II NETBOARD V1.0. Web: http://kmpelectronics.eu/en-us/products/dinoii.aspx
-//		ProDiNo NetBoard V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
+//		KMP ProDino MKR Zero (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
 // Description:
-//		Web server relay manipulation example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/webrelaycontrol.aspx
-// Version: 1.2.0
-// Date: 29.11.2015
+//		Web server over Ethernet Relay manipulation.
+// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebdhtserver.aspx
+// Version: 1.0.0
+// Date: 19.04.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-// Description: Compatible Arduino version >= 1.6.8
 
-#include "KMPDinoZeroEth.h"
+#include "KMPProDinoMKRZero.h"
 #include "KMPCommon.h"
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
@@ -20,7 +20,7 @@
 // Enter a MAC address and IP address for your controller below.
 byte _mac[] = { 0x00, 0x08, 0xDC, 0x7D, 0x15, 0x30 };
 // The IP address will be dependent on your local network.
-IPAddress _ip(192, 168, 0, 177);
+IPAddress _ip(192, 168, 1, 177);
 
 // Local port.
 // Port 80 is default for HTTP
@@ -30,8 +30,8 @@ const uint16_t LOCAL_PORT = 80;
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
 
-							  // Initialize the Ethernet server library.
-							  // with the IP address and port you want to use.
+// Initialize the Ethernet server library.
+// with the IP address and port you want to use.
 EthernetServer _server(LOCAL_PORT);
 
 // Client.
@@ -50,7 +50,7 @@ void setup()
 #endif
 
 	// Init Dino board. Set pins, start W5500.
-	KMPDinoZeroEth.init();
+	KMPProDinoMKRZero.init();
 
 	// Start the Ethernet connection and the server.
 	Ethernet.begin(_mac, _ip);
@@ -212,7 +212,7 @@ bool ReadClientRequest()
 	SerialUSB.println(newState);
 #endif
 
-	KMPDinoZeroEth.SetRelayState(relay, newState);
+	KMPProDinoMKRZero.SetRelayState(relay, newState);
 
 #ifdef DEBUG
 	SerialUSB.println("<< End client request.");
@@ -274,7 +274,7 @@ String BuildPage()
 		char* cellColor;
 		char* cellStatus;
 		char* nextRelayStatus;
-		if (KMPDinoZeroEth.GetRelayState(i))
+		if (KMPProDinoMKRZero.GetRelayState(i))
 		{
 			cellColor = (char*)RED;
 			cellStatus = (char*)W_ON;
