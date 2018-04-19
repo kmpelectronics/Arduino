@@ -50,7 +50,7 @@ void setup()
 #endif
 
 	// Init Dino board. Set pins, start W5500.
-	KMPProDinoMKRZero.init();
+	KMPProDinoMKRZero.init(true);
 
 	// Start the Ethernet connection and the server.
 	Ethernet.begin(_mac, _ip);
@@ -84,7 +84,7 @@ void loop() {
 #endif
 
 	// If client connected On status led.
-	//OnStatusLed();
+	KMPProDinoMKRZero.OnStatusLed();
 
 	// Read client request.
 	if (ReadClientRequest())
@@ -98,13 +98,14 @@ void loop() {
 		SerialUSB.println("#Request not processed.");
 	}
 #endif
-  WriteClientResponse();
+	
+	WriteClientResponse();
 
 	// Close the connection.
 	_client.stop();
 
 	// If client disconnected Off status led.
-	//OffStatusLed();
+	KMPProDinoMKRZero.OffStatusLed();
 
 #ifdef DEBUG
 	SerialUSB.println("Client disconnected.");
@@ -255,10 +256,10 @@ void WriteClientResponse()
 String BuildPage()
 {
 	String page =
-		"<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_ZERO_ETH) + " - Web Relay</title></head>"
+		"<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_MKRZERO) + " - Web Relay</title></head>"
 		+ "<body><div style='text-align: center'>"
 		+ "<br><hr />"
-		+ "<h1 style = 'color: #0066FF;'>" + String(PRODINO_ZERO_ETH) + " - Web Relay example</h1>"
+		+ "<h1 style = 'color: #0066FF;'>" + String(PRODINO_MKRZERO) + " - Web Relay example</h1>"
 		+ "<hr /><br><br>"
 		+ "<form method='post'>"
 		+ "<table border='1' width='300' cellpadding='5' cellspacing='0' align='center' style='text-align:center; font-size:large; font-family:Arial,Helvetica,sans-serif;'>";
@@ -296,6 +297,6 @@ String BuildPage()
 
 	return page + rows
 		+ "</table></form><br><br><hr /><h1><a href='" + String(URL_KMPELECTRONICS_EU) + "' target='_blank'>Visit " + String(KMP_ELECTRONICS_LTD) + "</a></h1>"
-		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_DINO_ZERO) + "' target='_blank'>Information about " + String(PRODINO_ZERO_ETH) + " board</a></h3>"
+		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_DINO_ZERO) + "' target='_blank'>Information about " + String(PRODINO_MKRZERO) + " board</a></h3>"
 		+ "<hr /></div></body></html>";
 }

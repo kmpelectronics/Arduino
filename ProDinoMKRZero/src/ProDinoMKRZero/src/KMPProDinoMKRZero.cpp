@@ -50,15 +50,9 @@ const int OPTOIN_PINS[OPTOIN_COUNT] =
 
 KMPProDinoMKRZeroClass KMPProDinoMKRZero;
 
-/**
- * @brief Initialize KMP Dino WiFi board.
- *		   WiFi module ESP8266, Expander MCP23S17, relays and opto inputs.
- *
- * @return void
- */
 void KMPProDinoMKRZeroClass::init()
 {
-	init(true);
+	init(false);
 }
 
 void KMPProDinoMKRZeroClass::init(bool startEthernet)
@@ -76,8 +70,8 @@ void KMPProDinoMKRZeroClass::init(bool startEthernet)
 	pinMode(OptoIn4Pin, INPUT);
 	
 	// Set status led output pin.
-	//pinMode(StatusLedPin, OUTPUT);
-	//digitalWrite(StatusLedPin, LOW);
+	pinMode(StatusLedPin, OUTPUT);
+	digitalWrite(StatusLedPin, LOW);
 
 	// RS485 pin init.
 	pinMode(RS485Pin, OUTPUT);
@@ -88,7 +82,7 @@ void KMPProDinoMKRZeroClass::init(bool startEthernet)
 
 	if (startEthernet) 
 	{
-		ResetEthernet();
+		RestartEthernet();
 		Ethernet.init(W5500CSPin);
 	}
 	else
@@ -97,7 +91,7 @@ void KMPProDinoMKRZeroClass::init(bool startEthernet)
 	}
 }
 
-void KMPProDinoMKRZeroClass::ResetEthernet()
+void KMPProDinoMKRZeroClass::RestartEthernet()
 {
 	// RSTn Pull-up Reset (Active low) RESET should be held low at least 500 us for W5500 reset.
 	digitalWrite(W5500ResetPin, LOW);
@@ -105,19 +99,35 @@ void KMPProDinoMKRZeroClass::ResetEthernet()
 	digitalWrite(W5500ResetPin, HIGH);
 }
 
+bool KMPProDinoMKRZeroClass::GetStatusLed()
+{
+	return digitalRead(StatusLedPin);
+}
+
+void KMPProDinoMKRZeroClass::SetStatusLed(bool state)
+{
+	digitalWrite(StatusLedPin, state);
+}
+
+void KMPProDinoMKRZeroClass::OnStatusLed()
+{
+	SetStatusLed(true);
+}
+
+void KMPProDinoMKRZeroClass::OffStatusLed()
+{
+	SetStatusLed(false);
+}
+
+void KMPProDinoMKRZeroClass::NotStatusLed()
+{
+	SetStatusLed(!GetStatusLed());
+}
 
 /* ----------------------------------------------------------------------- */
 /* Relays methods. */
 /* ----------------------------------------------------------------------- */
 
-/**
- * @brief Set relay new state.
- *
- * @param relayNumber Number of relay from 0 to RELAY_COUNT - 1. 0 - Relay1, 1 - Relay2 ...
- * @param state New state of relay, true - On, false = Off.
- *
- * @return void
- */
 void KMPProDinoMKRZeroClass::SetRelayState(uint8_t relayNumber, bool state)
 {
 	// Check if relayNumber is out of range - return.
@@ -129,26 +139,11 @@ void KMPProDinoMKRZeroClass::SetRelayState(uint8_t relayNumber, bool state)
 	digitalWrite(Relay_Pins[relayNumber], state);
 }
 
-/**
- * @brief Set relay new state.
- *
- * @param relay Relays - Relay1, Relay2 ...
- * @param state New state of relay, true - On, false = Off.
- *
- * @return void
- */
 void KMPProDinoMKRZeroClass::SetRelayState(Relay relay, bool state)
 {
 	SetRelayState((uint8_t)relay, state);
 }
 
-/**
- * @brief Set all relays new state.
- *
- * @param state New state of relay, true - On, false = Off.
- *
- * @return void
- */
 void KMPProDinoMKRZeroClass::SetAllRelaysState(bool state)
 {
 	for (uint8_t i = 0; i < RELAY_COUNT; i++)
@@ -157,33 +152,16 @@ void KMPProDinoMKRZeroClass::SetAllRelaysState(bool state)
 	}
 }
 
-/**
- * @brief Set all relays in ON state.
- *
- * @return void
- */
 void KMPProDinoMKRZeroClass::SetAllRelaysOn()
 {
 	SetAllRelaysState(true);
 }
 
-/**
- * @brief Set all relays in ON state.
- *
- * @return void
- */
 void KMPProDinoMKRZeroClass::SetAllRelaysOff()
 {
 	SetAllRelaysState(false);
 }
 
-/**
- * @brief Get relay state.
- *
- * @param relayNumber Relay number from 0 to RELAY_COUNT - 1
- *
- * @return bool true relay is On, false is Off. If number is out of range - return false.
- */
 bool KMPProDinoMKRZeroClass::GetRelayState(uint8_t relayNumber)
 {
 	// Check if relayNumber is out of range - return false.
@@ -195,13 +173,6 @@ bool KMPProDinoMKRZeroClass::GetRelayState(uint8_t relayNumber)
 	return digitalRead(Relay_Pins[relayNumber]);
 }
 
-/**
- * @brief Get relay state.
- *
- * @param relay Relay1, Relay2 ...
- *
- * @return bool true relay is On, false is Off. If number is out of range - return false.
- */
 bool KMPProDinoMKRZeroClass::GetRelayState(Relay relay)
 {
 	return GetRelayState((uint8_t)relay);
@@ -211,13 +182,6 @@ bool KMPProDinoMKRZeroClass::GetRelayState(Relay relay)
 /* Opto input methods. */
 /* ----------------------------------------------------------------------- */
 
-/**
- * @brief Get opto in state.
- *
- * @param optoInNumber OptoIn number from 0 to OPTOIN_COUNT - 1
- *
- * @return bool true - opto in is On, false is Off. If number is out of range - return false.
- */
 bool KMPProDinoMKRZeroClass::GetOptoInState(uint8_t optoInNumber)
 {
 	// Check if optoInNumber is out of range - return false.
@@ -229,13 +193,6 @@ bool KMPProDinoMKRZeroClass::GetOptoInState(uint8_t optoInNumber)
 	return digitalRead(OPTOIN_PINS[optoInNumber]);
 }
 
-/**
- * @brief Get opto in state.
- *
- * @param relay OptoIn1, OptoIn2 ...
- *
- * @return bool true - opto in is On, false is Off. If number is out of range - return false.
- */
 bool KMPProDinoMKRZeroClass::GetOptoInState(OptoIn optoIn)
 {
 	return GetOptoInState((uint8_t)optoIn);
@@ -245,40 +202,16 @@ bool KMPProDinoMKRZeroClass::GetOptoInState(OptoIn optoIn)
 /* RS485 methods. */
 /* ----------------------------------------------------------------------- */
 
-/**
-* @brief Connect to RS485. With default configuration SERIAL_8N1.
-*
-* @param baud Speed.
-*     Values: 75, 110, 300, 1200, 2400, 4800, 9600, 19200, 38400, 57600 and 115200 bit/s.
-*
-* @return void
-*/
 void KMPProDinoMKRZeroClass::RS485Begin(unsigned long baud)
 {
 	RS485Begin(baud, SERIAL_8N1);
 }
 
-/**
-* @brief Start connect to RS485.
-*
-* @param baud Speed.
-*             Values: 75, 110, 300, 1200, 2400, 4800, 9600, 19200, 38400, 57600 and 115200 bit/s.
-* @param config Configuration - data bits, parity, stop bits.
-*               Values: SERIAL_5N1, SERIAL_6N1, SERIAL_7N1, SERIAL_8N1, SERIAL_5N2, SERIAL_6N2, SERIAL_7N2, SERIAL_8N2, SERIAL_5E1, SERIAL_6E1, SERIAL_7E1, SERIAL_8E1, SERIAL_5E2, 
-						SERIAL_6E2, SERIAL_7E2, SERIAL_8E2, SERIAL_5O1, SERIAL_6O1, SERIAL_7O1, SERIAL_8O1, SERIAL_5O2, SERIAL_6O2, SERIAL_7O2, SERIAL_8O2
-*
-* @return void
-*/
 void KMPProDinoMKRZeroClass::RS485Begin(unsigned long baud, uint16_t config)
 {
 	RS485Serial.begin(baud, config);
 }
 
-/**
-* @brief Close connection to RS485.
-*
-* @return void
-*/
 void KMPProDinoMKRZeroClass::RS485End()
 {
 	RS485Serial.end();
@@ -307,13 +240,6 @@ void RS485EndWrite()
 	digitalWrite(RS485Pin, RS485Transmit);
 }
 
-/**
-* @brief Transmit one byte data to RS485.
-*
-* @param data Transmit data.
-*
-* @return size_t Count of transmitted - one byte.
-*/
 size_t KMPProDinoMKRZeroClass::RS485Write(uint8_t data)
 {
 	RS485BeginWrite();
@@ -325,25 +251,11 @@ size_t KMPProDinoMKRZeroClass::RS485Write(uint8_t data)
 	return result;
 }
 
-/**
-* @brief Transmit one char data to RS485.
-*
-* @param data Transmit data.
-*
-* @return size_t Count of transmitted - one char.
-*/
 size_t KMPProDinoMKRZeroClass::RS485Write(char data)
 {
 	return RS485Write((uint8_t)data);
 }
 
-/**
-* @brief Transmit the text to RS485.
-*
-* @param data Text data to transmit.
-*
-* @return size_t Count of transmitted chars.
-*/
 size_t KMPProDinoMKRZeroClass::RS485Write(const char* data)
 {
 	RS485BeginWrite();
@@ -361,14 +273,6 @@ size_t KMPProDinoMKRZeroClass::RS485Write(const char* data)
 	return result;
 }
 
-/**
-* @brief Send array of bytes to RS485.
-*
-* @param data Array in bytes to be send.
-* @param dataLen Array length.
-*
-* @return size_t Count of transmitted bytes.
-*/
 size_t KMPProDinoMKRZeroClass::RS485Write(uint8_t* data, uint8_t dataLen)
 {
 	RS485BeginWrite();
@@ -384,29 +288,11 @@ size_t KMPProDinoMKRZeroClass::RS485Write(uint8_t* data, uint8_t dataLen)
 	return result;
 }
 
-/**
-* @brief Read received data from RS485.
-*
-*
-* @return int Received byte.<para></para>
-*   If result = -1 - buffer is empty, no data
-*   if result > -1 - valid byte to read.
-*/
 int KMPProDinoMKRZeroClass::RS485Read()
 {
 	return RS485Read(10, 10);
 }
 
-/**
-* @brief Read received data from RS485. Reading data with delay and repeating the operation while all data to arrive.
-*
-* @param delayWait Wait delay if not available to read byte in milliseconds. Default 10.
-* @param repeatTime Repeat time if not read bytes. Default 10. All time = delayWait * repeatTime.
-*
-* @return int Received byte.
-*   If result = -1 - buffer is empty, no data<para></para>
-*   if result > -1 - valid byte to read.
-*/
 int KMPProDinoMKRZeroClass::RS485Read(unsigned long delayWait, uint8_t repeatTime)
 {
 	// If the buffer empty, wait until the data arrive.
