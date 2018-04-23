@@ -41,7 +41,7 @@
 #include <BlynkSimpleEthernet2.h>
 
 // You should get Auth Token in the Blynk App.
-char AUTH_TOKEN[] = "1234567890abcdef1234567890abcde";
+char AUTH_TOKEN[] = "b3f079188ee1434298377c5e58fb8d4e";
 
 // Define sensors structure.
 struct MeasureHT_t
@@ -106,24 +106,19 @@ void setup(void)
 
 	Blynk.begin(AUTH_TOKEN);
 
-	// Start sensors.
+	// Starts DHT sensors.
 	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
 	{
 		MeasureHT_t* measureHT = &_measureHT[i];
-
-		Serial.print("Sensor name: \"" + measureHT->Name + "\" - ");
 		if (measureHT->IsEnable)
 		{
 			measureHT->dht.begin();
-			Serial.println("Start");
-		}
-		else
-		{
-			Serial.println("Disable");
 		}
 	}
 
 	_mesureTimeout = 0;
+
+	ProcessOptoInputs();
 }
 
 /**
@@ -203,6 +198,20 @@ void SetRelay(Relay relay, int status)
 	KMPProDinoMKRZero.SetRelayState(relay, status == 1);
 }
 
+// This function will run every time Blynk connection is established
+BLYNK_CONNECTED() {
+	// Request Blynk server to re-send latest values for all pins
+	Blynk.syncAll();
+
+	//ProcessOptoInputs();
+	// You can also update individual virtual pins like this:
+	//Blynk.syncVirtual(V0, V2);
+
+	// Let's write your hardware uptime to Virtual Pin 2
+	//int value = millis() / 1000;
+	//Blynk.virtualWrite(V2, value);
+}
+
 /**
  * @brief Set Relay 1 state.
  *			On virtual pin 1.
@@ -210,6 +219,15 @@ void SetRelay(Relay relay, int status)
 BLYNK_WRITE(V1)
 {
 	SetRelay(Relay1, param.asInt());
+}
+
+/**
+* @brief Set Relay 1 state.
+*			On virtual pin 1.
+*/
+BLYNK_READ(V1)
+{
+	Blynk.virtualWrite(V1, KMPProDinoMKRZero.GetRelayState(Relay1));
 }
 
 /**
@@ -239,38 +257,38 @@ BLYNK_WRITE(V4)
 	SetRelay(Relay4, param.asInt());
 }
 
-///**
-// * @brief Get opto input 1 state.
-// *			On virtual pin 5.
-// */
-//BLYNK_READ(V5)
-//{
-//	Blynk.virtualWrite(V5, KMPProDinoMKRZero.GetOptoInState(OptoIn1));
-//}
-//
-///**
-// * @brief Get opto input 2 state.
-// *			On virtual pin 6.
-// */
-//BLYNK_READ(V6)
-//{
-//	Blynk.virtualWrite(V6, KMPProDinoMKRZero.GetOptoInState(OptoIn2));
-//}
-//
-///**
-// * @brief Get opto input 3 state.
-// *			On virtual pin 7.
-// */
-//BLYNK_READ(V7)
-//{
-//	Blynk.virtualWrite(V7, KMPProDinoMKRZero.GetOptoInState(OptoIn3));
-//}
-//
-///**
-// * @brief Get opto input 4 state.
-// *			On virtual pin 8.
-// */
-//BLYNK_READ(V8)
-//{
-//	Blynk.virtualWrite(V8, KMPProDinoMKRZero.GetOptoInState(OptoIn4));
-//}
+/**
+ * @brief Get opto input 1 state.
+ *			On virtual pin 5.
+ */
+BLYNK_READ(V5)
+{
+	Blynk.virtualWrite(V5, KMPProDinoMKRZero.GetOptoInState(OptoIn1));
+}
+
+/**
+ * @brief Get opto input 2 state.
+ *			On virtual pin 6.
+ */
+BLYNK_READ(V6)
+{
+	Blynk.virtualWrite(V6, KMPProDinoMKRZero.GetOptoInState(OptoIn2));
+}
+
+/**
+ * @brief Get opto input 3 state.
+ *			On virtual pin 7.
+ */
+BLYNK_READ(V7)
+{
+	Blynk.virtualWrite(V7, KMPProDinoMKRZero.GetOptoInState(OptoIn3));
+}
+
+/**
+ * @brief Get opto input 4 state.
+ *			On virtual pin 8.
+ */
+BLYNK_READ(V8)
+{
+	Blynk.virtualWrite(V8, KMPProDinoMKRZero.GetOptoInState(OptoIn4));
+}
