@@ -190,7 +190,7 @@ bool KMPProDinoMKRZeroClass::GetOptoInState(uint8_t optoInNumber)
 		return false;
 	}
 
-	return digitalRead(OPTOIN_PINS[optoInNumber]);
+	return !digitalRead(OPTOIN_PINS[optoInNumber]);
 }
 
 bool KMPProDinoMKRZeroClass::GetOptoInState(OptoIn optoIn)
