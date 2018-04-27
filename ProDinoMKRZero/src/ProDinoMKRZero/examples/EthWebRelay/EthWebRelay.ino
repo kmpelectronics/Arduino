@@ -70,7 +70,8 @@ void setup()
 *
 * \return void
 */
-void loop() {
+void loop() 
+{
 	// Listen for incoming clients.
 	_client = _server.available();
 
