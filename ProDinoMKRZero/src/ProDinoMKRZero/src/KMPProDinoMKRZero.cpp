@@ -33,8 +33,8 @@
 // RS485 pins. Serial.
 #define RS485Pin 3  // PA11
 #define RS485Serial Serial1
-#define RS485Transmit     LOW
-#define RS485Receive      HIGH
+#define RS485Transmit     HIGH
+#define RS485Receive      LOW
 
 /**
  * @brief Relay pins.
@@ -225,7 +225,6 @@ void KMPProDinoMKRZeroClass::RS485End()
 void RS485BeginWrite()
 {
 	digitalWrite(RS485Pin, RS485Receive);
-	delay(1);
 }
 
 /**
@@ -236,7 +235,6 @@ void RS485BeginWrite()
 void RS485EndWrite()
 {
 	RS485Serial.flush();
-	delay(1);
 	digitalWrite(RS485Pin, RS485Transmit);
 }
 

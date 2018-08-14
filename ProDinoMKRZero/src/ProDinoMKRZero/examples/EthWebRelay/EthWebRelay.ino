@@ -298,6 +298,6 @@ String BuildPage()
 
 	return page + rows
 		+ "</table></form><br><br><hr /><h1><a href='" + String(URL_KMPELECTRONICS_EU) + "' target='_blank'>Visit " + String(KMP_ELECTRONICS_LTD) + "</a></h1>"
-		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_DINO_ZERO) + "' target='_blank'>Information about " + String(PRODINO_MKRZERO) + " board</a></h3>"
+		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_PRODINO_MKRZERO) + "' target='_blank'>Information about " + String(PRODINO_MKRZERO) + " board</a></h3>"
 		+ "<hr /></div></body></html>";
 }

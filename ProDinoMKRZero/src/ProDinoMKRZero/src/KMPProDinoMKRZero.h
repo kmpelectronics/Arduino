@@ -48,7 +48,7 @@ enum OptoIn {
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
 const char PRODINO_MKRZERO[] = "ProDino MKR Zero";
-const char URL_KMPELECTRONICS_EU_PRODINO_MKRZERO[] = "http://www.kmpelectronics.eu/en-us/products/prodinozero-eth.aspx";
+const char URL_KMPELECTRONICS_EU_PRODINO_MKRZERO[] = "http://kmpelectronics.eu/products/prodinomkrzero.aspx";
 
 class KMPProDinoMKRZeroClass
 {

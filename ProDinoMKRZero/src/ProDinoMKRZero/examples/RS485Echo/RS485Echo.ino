@@ -60,7 +60,7 @@ void loop() {
 	}
 
 	// If data send - On status led.
-	//OnStatusLed();
+	KMPProDinoMKRZero.OnStatusLed();
 
 	uint8_t buffPos = 0;
 
@@ -81,5 +81,5 @@ void loop() {
 	}
 
 	// Off status led.
-	//OffStatusLed();
+	KMPProDinoMKRZero.OffStatusLed();
 }
