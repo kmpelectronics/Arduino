@@ -2,11 +2,11 @@
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: http://kmpelectronics.eu/
 // Supported boards: 
-//		KMP ProDino Zero Eth (http://www.kmpelectronics.eu/en-us/products/prodinozero-eth.aspx)
+//		ProDino MKR Zero ??? (http://www.kmpelectronics.eu/en-us/products/prodinozero-eth.aspx)
 // Description:
 //		Header for KMP Dino Zero Eth board.
 // Version: 1.0.0
-// Date: 15.03.2017
+// Date: 15.03.2018
 // Authors: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
 #ifndef _KMPPRODINOMKRZERO_H
@@ -21,7 +21,7 @@
 #define OPTOIN_COUNT 4
 
 /**
- * @brief Grove 1 connector
+ * @brief A Grove connector pins
  */
 #define	GROVE_D0	12 // PA09
 #define	GROVE_D1	11 // PA08
@@ -30,44 +30,57 @@
  * @brief Relays.
  */
 enum Relay {
-	Relay1 = 0x00,
-	Relay2 = 0x01,
-	Relay3 = 0x02,
-	Relay4 = 0x03
+	Relay1 = 0,
+	Relay2 = 1,
+	Relay3 = 2,
+	Relay4 = 3
 };
 
 /**
  * @brief Inputs.
  */
 enum OptoIn {
-	OptoIn1 = 0x00,
-	OptoIn2 = 0x01,
-	OptoIn3 = 0x02,
-	OptoIn4 = 0x03
+	OptoIn1 = 0,
+	OptoIn2 = 1,
+	OptoIn3 = 2,
+	OptoIn4 = 3
+};
+
+/**
+ * @brief All available bards.
+ */
+enum BoardType {
+	None = 0,
+	ProDino_MKR_Zero = 1,
+	ProDino_MKR_Zero_Ethernet = 2,
+	ProDino_MKR_GSM = 3,
+	ProDino_MKR_GSM_Ethernet = 4
 };
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
-const char PRODINO_MKRZERO[] = "ProDino MKR Zero";
-const char URL_KMPELECTRONICS_EU_PRODINO_MKRZERO[] = "http://kmpelectronics.eu/products/prodinomkrzero.aspx";
+const char PRODINO_MKRZERO[] = "ProDino MKR Zero series";
+const char URL_KMPELECTRONICS_EU_PRODINO_MKRZERO[] = "https://kmpelectronics.eu/product-category/arduino-mkr-zero/";
 
 class KMPProDinoMKRZeroClass
 {
  public:
 	/**
 	* @brief Initialize KMP ProDino MKR Zero board. The Ethernet doesn't start.
-	*		  Microcontroller Arduino Zero compatible, GSM module, relays and opto inputs.
+	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
+	* @param board Initialize specific bard. Mandatory.
 	*
 	* @return void
 	*/
-	void init();
+	void init(BoardType board);
 	/**
 	* @brief Initialize KMP ProDino MKR Zero board.
-	*		  Microcontroller Arduino Zero compatible, GSM module, relays and opto inputs.
-	* @param startEthernet If parameter is equal true - starts Ethernet W5500 or false - the Ethernet doesn't work.
+	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
+	* @param board Initialize specific bard. Mandatory.
+	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet is stopped.
 	*
 	* @return void
 	*/
-	void init(bool startEthernet);
+	void init(BoardType board, bool startEthernet);
 
 	/**
 	* @brief Restarts (Stop & Start) Ethernet.
@@ -269,6 +282,9 @@ class KMPProDinoMKRZeroClass
 	*   if result > -1 - valid byte to read.
 	*/
 	int RS485Read(unsigned long delayWait, uint8_t repeatTime);
+
+	private:
+		void InitEthernet(bool startEthernet);
 };
 
 extern KMPProDinoMKRZeroClass KMPProDinoMKRZero;

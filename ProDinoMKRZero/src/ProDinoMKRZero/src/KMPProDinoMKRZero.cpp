@@ -24,17 +24,17 @@
 #define OptoIn4Pin 1  // PA23
 
 // Status led pin.
-#define	StatusLedPin 6 // PA20
+#define	StatusLedPin  6 // PA20
 
 // W5500 pins.
 #define W5500ResetPin 5  // PB11
 #define W5500CSPin    4  // PB10
 
 // RS485 pins. Serial.
-#define RS485Pin 3  // PA11
-#define RS485Serial Serial1
-#define RS485Transmit     HIGH
-#define RS485Receive      LOW
+#define RS485Pin      3  // PA11
+#define RS485Serial	  Serial1
+#define RS485Transmit HIGH
+#define RS485Receive  LOW
 
 /**
  * @brief Relay pins.
@@ -49,14 +49,17 @@ const int OPTOIN_PINS[OPTOIN_COUNT] =
 { OptoIn1Pin, OptoIn2Pin, OptoIn3Pin, OptoIn4Pin };
 
 KMPProDinoMKRZeroClass KMPProDinoMKRZero;
+BoardType _board;
 
-void KMPProDinoMKRZeroClass::init()
+void KMPProDinoMKRZeroClass::init(BoardType board)
 {
-	init(false);
+	init(board, true);
 }
 
-void KMPProDinoMKRZeroClass::init(bool startEthernet)
+void KMPProDinoMKRZeroClass::init(BoardType board, bool startEthernet)
 {
+	_board = board;
+
 	// Relay pins init.
 	pinMode(Rel1Pin, OUTPUT);
 	pinMode(Rel2Pin, OUTPUT);
@@ -75,19 +78,27 @@ void KMPProDinoMKRZeroClass::init(bool startEthernet)
 
 	// RS485 pin init.
 	pinMode(RS485Pin, OUTPUT);
-	digitalWrite(RS485Pin, RS485Transmit);
+	digitalWrite(RS485Pin, RS485Receive);
 
-	// W5500 pin init.
-	pinMode(W5500ResetPin, OUTPUT);
+	InitEthernet(startEthernet);
+}
 
-	if (startEthernet) 
+void KMPProDinoMKRZeroClass::InitEthernet(bool startEthernet)
+{
+	if (_board == ProDino_MKR_Zero_Ethernet || _board == ProDino_MKR_GSM_Ethernet)
 	{
-		RestartEthernet();
-		Ethernet.init(W5500CSPin);
-	}
-	else
-	{
-		digitalWrite(W5500ResetPin, LOW);
+		// W5500 pin init.
+		pinMode(W5500ResetPin, OUTPUT);
+
+		if (startEthernet)
+		{
+			RestartEthernet();
+			Ethernet.init(W5500CSPin);
+		}
+		else
+		{
+			digitalWrite(W5500ResetPin, LOW);
+		}
 	}
 }
 
@@ -224,7 +235,7 @@ void KMPProDinoMKRZeroClass::RS485End()
 */
 void RS485BeginWrite()
 {
-	digitalWrite(RS485Pin, RS485Receive);
+	digitalWrite(RS485Pin, RS485Transmit);
 }
 
 /**
@@ -235,7 +246,7 @@ void RS485BeginWrite()
 void RS485EndWrite()
 {
 	RS485Serial.flush();
-	digitalWrite(RS485Pin, RS485Transmit);
+	digitalWrite(RS485Pin, RS485Receive);
 }
 
 size_t KMPProDinoMKRZeroClass::RS485Write(uint8_t data)
@@ -293,7 +304,7 @@ int KMPProDinoMKRZeroClass::RS485Read()
 
 int KMPProDinoMKRZeroClass::RS485Read(unsigned long delayWait, uint8_t repeatTime)
 {
-	// If the buffer empty, wait until the data arrive.
+	// If the buffer is empty, wait until the data arrives.
 	while (!RS485Serial.available())
 	{
 		delay(delayWait);
