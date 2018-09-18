@@ -11,8 +11,8 @@
 #define _KMPCOMMON_h
 
 #include "Arduino.h"
-
 #include "IPAddress.h"
+#include <Ethernet2.h>
 
 #ifndef UINT8_MAX
 #define UINT8_MAX (~(uint8_t)0)
@@ -48,6 +48,8 @@ const char CH_E = 'E';
 const char CH_EQUAL = '=';
 const char W_ON[] = "On";
 const char W_OFF[] = "Off";
+const char W_GET[] = "GET";
+const char W_POST[] = "POST";
 const char KMP_ELECTRONICS_LTD[] = "KMP Electronics Ltd.";
 const char URL_KMPELECTRONICS_EU[] = "http://kmpelectronics.eu/";
 const char HEADER_200_TEXT_HTML[] = "HTTP / 1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
@@ -62,6 +64,13 @@ struct TimeSpan
     uint8_t Seconds;
     uint8_t Minutes;
     uint8_t Hours;
+};
+
+enum RequestType
+{
+	NONE,
+	GET,
+	POST
 };
 
 /**
@@ -278,5 +287,29 @@ void strReplace(char * str, uint8_t strLen, char oldChar, char newChar);
  * \return void
  */
 void MillisToTime(unsigned long millis, TimeSpan & time);
+
+/**
+* @brief Reading line from Ethernet stream. Reading all characters to CR/LF, LF/CR
+*
+* @param client Ethernet client instance.
+* @param line Result line without CR and LF.
+*
+* @return bool
+*   false - going to the end or client is null.
+*   true - in Ethernet stream found data to read, the line is empty (on the line has only CR and LF).
+* @note This method is easy to use (for examples) but it is slow because uses String for a char buffer.
+*/
+bool ReadHttpRequestLine(EthernetClient* client, String* line);
+
+/**
+* @brief Get type of request - GET, POST or other.
+*
+* @param data It is data buffer which contains character to be check.
+*
+* @return RequestType
+*   None - the method doesn't determine request type.
+*   Get, Post or other.
+*/
+RequestType GetRequestType(const char* data);
 
 #endif

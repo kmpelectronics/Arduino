@@ -275,3 +275,52 @@ void MillisToTime(unsigned long millis, TimeSpan & time )
     //subtract the converted hours to days in order to display 23 hours max.
     time.Hours = time.AllHours - (time.AllDays * 24);
 }
+
+bool ReadHttpRequestLine(EthernetClient* client, String* line)
+{
+	*line = "";
+
+	if (client == NULL)
+	{
+		return false;
+	}
+
+	bool isCRLF = false;
+	int c;
+	while ((c = client->peek()) > -1)
+	{
+		if (c == CH_CR || c == CH_LF)
+		{
+			isCRLF = true;
+		}
+		else
+		{
+			// The line finished and next char isn't CH_CR or CH_LF. 
+			if (isCRLF)
+			{
+				return true;
+			}
+
+			*line += (char)c;
+		}
+		client->read();
+	}
+
+	// Nothing for read.
+	return false;
+}
+
+RequestType GetRequestType(const char* data)
+{
+	if (startsWith(data, W_GET, true))
+	{
+		return GET;
+	}
+
+	if (startsWith(data, W_POST, true))
+	{
+		return POST;
+	}
+
+	return NONE;
+}
