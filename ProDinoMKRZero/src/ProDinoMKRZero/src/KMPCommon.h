@@ -299,7 +299,7 @@ void MillisToTime(unsigned long millis, TimeSpan & time);
 *   true - in Ethernet stream found data to read, the line is empty (on the line has only CR and LF).
 * @note This method is easy to use (for examples) but it is slow because uses String for a char buffer.
 */
-bool ReadHttpRequestLine(EthernetClient* client, String* line);
+bool ReadHttpRequestLine(Stream* client, String* line);
 
 /**
 * @brief Get type of request - GET, POST or other.

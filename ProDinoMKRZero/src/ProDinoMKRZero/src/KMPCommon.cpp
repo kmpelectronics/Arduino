@@ -276,7 +276,7 @@ void MillisToTime(unsigned long millis, TimeSpan & time )
     time.Hours = time.AllHours - (time.AllDays * 24);
 }
 
-bool ReadHttpRequestLine(EthernetClient* client, String* line)
+bool ReadHttpRequestLine(Stream* client, String* line)
 {
 	*line = "";
 

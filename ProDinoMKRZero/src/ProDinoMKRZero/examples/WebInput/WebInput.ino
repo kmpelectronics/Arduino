@@ -3,6 +3,7 @@
 // Web: https://kmpelectronics.eu/
 // Supported boards:
 //		- KMP ProDino MKR Zero Ethernet V1 (https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/)
+//		- KMP ProDino MKR GSM Ethernet V1  (https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/)
 // Description:
 //		Reading isolated input statuses through web page.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-mkr-versions-examples/
