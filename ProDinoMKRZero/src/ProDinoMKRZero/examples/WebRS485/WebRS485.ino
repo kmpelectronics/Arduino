@@ -10,6 +10,10 @@
 // Version: 1.0.0
 // Date: 20.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
+// --------------------------------------------------------------------------------
+// Prerequisites:
+//		Before start this example you need:
+//		Connect RS485 (make echo, and configured 19200, 8N1) device to RS485 port.
 
 #include "KMPProDinoMKRZero.h"
 #include "KMPCommon.h"
