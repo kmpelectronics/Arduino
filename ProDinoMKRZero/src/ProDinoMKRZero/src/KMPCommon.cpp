@@ -324,3 +324,16 @@ RequestType GetRequestType(const char* data)
 
 	return NONE;
 }
+
+String GetValue(const String &data, const String &key)
+{
+	int keyIndex = data.indexOf(key);
+	int startIndex = data.indexOf("=", keyIndex);
+	int stopIndex = data.indexOf("&", keyIndex);
+	if (stopIndex == -1)
+	{
+		stopIndex = data.length() - 1;
+	}
+
+	return data.substring(startIndex + 1, stopIndex);
+}

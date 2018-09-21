@@ -1,19 +1,20 @@
-// EthWebDHT.ino
+// WebDHT.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino MKR Zero (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//		- KMP ProDino MKR Zero Ethernet V1 (https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/)
+//		- KMP ProDino MKR GSM Ethernet V1  (https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/)
 // Description:
-//		Web server DHT example.
-// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebdhtserver.aspx
+//		Read temperature and humidity from DHT sensors and show them in a WEB page.
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-mkr-versions-examples/
 // Version: 1.0.0
-// Date: 19.04.2018
+// Date: 21.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 // --------------------------------------------------------------------------------
 // Prerequisites:
-//		Before start this example you need to install DHT library: https://github.com/adafruit/DHT-sensor-library
-//		Connect DHT22 sensor to External GROVE connector. Use pins: 
+//		Before starts this example you need to install DHT library: https://github.com/adafruit/DHT-sensor-library
+//		Connect DHT22 sensor to GROVE connector. Use pins: 
 //			- first  sensor GROVE_D0, Vcc+, Gnd(-);
 //			- second sensor GROVE_D1, Vcc+, Gnd(-);
 
@@ -26,9 +27,9 @@
 #define DEBUG
 
 // Enter a MAC address and IP address for your controller below.
-byte _mac[] = { 0x00, 0x08, 0xDC, 0x7D, 0x15, 0x30 };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0xDA, 0x1E, 0xB3 };
 // The IP address will be dependent on your local network.
-IPAddress _ip(192, 168, 1, 177);
+IPAddress _ip(192, 168, 1, 198);
 
 // Local port.
 // Port 80 is default for HTTP
@@ -66,34 +67,38 @@ const long CHECK_HT_INTERVAL_MS = 5000;
 // Store last measure time.
 unsigned long _mesureTimeout;				
 
+// Initialize the Ethernet server library.
+// with the IP address and port you want to use.
 EthernetServer _server(LOCAL_PORT);
 
 // Client.
 EthernetClient _client;
 
 /**
- * @brief Execute first after start device. Initialize hardware.
+ * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
  *
  * @return void
  */
 void setup(void)
 {
+	delay(5000);
 #ifdef DEBUG
-	SerialUSB.begin(115200);
+	Serial.begin(115200);
 #endif
 
 	// Init Dino board. Set pins, start W5500.
-	KMPProDinoMKRZero.init();
+	KMPProDinoMKRZero.init(ProDino_MKR_Zero_Ethernet);
 
 	// Start the Ethernet connection and the server.
 	Ethernet.begin(_mac, _ip);
 	_server.begin();
 
 #ifdef DEBUG
-	SerialUSB.println("The server is starting.");
-	SerialUSB.println(Ethernet.localIP());
-	SerialUSB.println(Ethernet.gatewayIP());
-	SerialUSB.println(Ethernet.subnetMask());
+	Serial.println("The example WebDHT is started.");
+	Serial.println("IPs:");
+	Serial.println(Ethernet.localIP());
+	Serial.println(Ethernet.gatewayIP());
+	Serial.println(Ethernet.subnetMask());
 #endif
 
 	// Start sensors.
@@ -117,14 +122,16 @@ void setup(void)
 }
 
 /**
- * @brief Main method.
- *
- * @return void
- */
-void loop(void)
+* @brief Loop void. Arduino executed second.
+*
+*
+* @return void
+*/
+void loop() 
 {
 	GetDataFromSensors();
-	// Listen for incoming clients.
+
+	// Waiting for a client.
 	_client = _server.available();
 
 	if (!_client.connected())
@@ -133,44 +140,54 @@ void loop(void)
 	}
 
 #ifdef DEBUG
-	SerialUSB.println("Client connected.");
+	Serial.println(">> Client connected.");
 #endif
 
-	// If client connected On status led.
-	//OnStatusLed();
-	int c;
-	// Read client request.
-	while ((c = _client.peek()) > -1)
-	{
-		_client.read();
-	}
+	// If client connected switch On status led.
+	KMPProDinoMKRZero.OnStatusLed();
 
+	// Read client request.
+	ReadClientRequest();
 	WriteClientResponse();
 
-	// Close the connection.
+	// Close the client connection.
 	_client.stop();
 
-	// If client disconnected Off status led.
-	//OffStatusLed();
+	// If client disconnected switch Off status led.
+	KMPProDinoMKRZero.OffStatusLed();
 
 #ifdef DEBUG
-	SerialUSB.println("Client disconnected.");
-	SerialUSB.println("---");
+	Serial.println(">> Client disconnected.");
+	Serial.println();
 #endif
 }
 
 /**
-* \brief WriteClientResponse void. Write html response.
+* @brief ReadClientRequest void. Read and parse client request.
+* 	First row of client request is similar to:
+*		GET / HTTP/1.1
+* You can check communication client-server get program Smart Sniffer: http://www.nirsoft.net/utils/smsniff.html
+*
+* @return bool Returns true if the request was expected.
+*/
+bool ReadClientRequest()
+{
+	// Loop while read all request.
+	String row;
+	while (ReadHttpRequestLine(&_client, &row));
+
+	return true;
+}
+
+
+/**
+* @brief WriteClientResponse void. Write html response.
 *
 *
-* \return void
+* @return void
 */
 void WriteClientResponse()
 {
-#ifdef DEBUG
-	SerialUSB.println("Write client response.");
-#endif
-
 	if (!_client.connected())
 	{
 		return;
@@ -192,34 +209,31 @@ void WriteClientResponse()
  */
 String BuildPage()
 {
-	String page =
-		"<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_ZERO_ETH) + " - Web DHT</title></head>"
-		+ "<body><div style='text-align: center'>"
-		+ "<br><hr />"
-		+ "<h1 style = 'color: #0066FF;'>" + String(PRODINO_ZERO_ETH) + " - Web DHT example</h1>"
-		+ "<hr /><br><br>"
-		+ "<table border='1' width='450' cellpadding='5' cellspacing='0' align='center' style='text-align:center; font-size:large; font-family:Arial,Helvetica,sans-serif;'>"
-		+ "<thead><tr><th style='width:30%'></th><th style='width:35%'>Temperature C&deg;</th><th>Humidity</th></tr></thead>";
-
 	// Add table rows, relay information.
-	String tableBody = "<tbody>";
+	String rows = "";
 	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
 	{
 		// Row i, cell 1
 		MeasureHT_t* measureHT = &_measureHT[i];
-		tableBody += "<tr><td"+ (measureHT->IsEnable ? "" : " bgcolor='" + String(GRAY) + "'") + ">" + measureHT->Name + "</td>";
+		rows += "<tr><td"+ (measureHT->IsEnable ? "" : " bgcolor='" + String(GRAY) + "'") + ">" + measureHT->Name + "</td>";
 
 		// Cell i,2
-		tableBody += "<td>" + FormatMeasure(measureHT->IsEnable, measureHT->Temperature) + "</td>";
+		rows += "<td>" + FormatMeasure(measureHT->IsEnable, measureHT->Temperature) + "</td>";
 
 		// Cell i,3
-		tableBody += "<td>" + FormatMeasure(measureHT->IsEnable, measureHT->Humidity) + "</td></tr>";
+		rows += "<td>" + FormatMeasure(measureHT->IsEnable, measureHT->Humidity) + "</td></tr>";
 	}
-	tableBody += "</tbody>";
 
-	return page + tableBody
-		+ "</table><br><br><hr /><h1><a href='" + String(URL_KMPELECTRONICS_EU) + "' target='_blank'>Visit " + String(KMP_ELECTRONICS_LTD) + "</a></h1>"
-		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_DINO_ZERO) + "' target='_blank'>Information about " + String(PRODINO_ZERO_ETH) + " board</a></h3>"
+	return "<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_MKRZERO) + " - Web DHT</title></head>"
+		+ "<body><div style='text-align: center'>"
+		+ "<br><hr />"
+		+ "<h1 style = 'color: #0066FF;'>" + String(PRODINO_MKRZERO) + " - Web DHT example</h1>"
+		+ "<hr /><br><br>"
+		+ "<table border='1' width='300' cellpadding='5' cellspacing='0' align='center' style='text-align:center; font-size:large; font-family:Arial,Helvetica,sans-serif;'>"
+		+ "<thead><tr><th style='width:30%'></th><th style='width:35%'>Temperature C&deg;</th><th>Humidity</th></tr></thead><tbody>"
+		+ rows
+		+ "</tbody></table><br><br><hr /><h1><a href='" + String(URL_KMPELECTRONICS_EU) + "' target='_blank'>Visit " + String(KMP_ELECTRONICS_LTD) + "</a></h1>"
+		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_PRODINO_MKRZERO) + "' target='_blank'>Information about " + String(PRODINO_MKRZERO) + " board</a></h3>"
 		+ "<hr /></div></body></html>";
 }
 

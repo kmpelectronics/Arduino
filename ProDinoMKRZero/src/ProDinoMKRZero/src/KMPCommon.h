@@ -312,4 +312,13 @@ bool ReadHttpRequestLine(Stream* client, String* line);
 */
 RequestType GetRequestType(const char* data);
 
+/**
+* @brief Get a value per certain key from WEB POST request data.
+*
+* @param data It is data should certain key and value. Example: data=test&btn=Transmit
+*
+* @return value for a key. If key is not found return empty string.
+*/
+String GetValue(const String &data, const String &key);
+
 #endif

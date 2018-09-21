@@ -1,21 +1,15 @@
-// EthWebRS485.ino
+// WebRS485.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//		- KMP ProDino MKR Zero Ethernet V1 (https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/)
+//		- KMP ProDino MKR GSM Ethernet V1  (https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/)
 // Description:
-//		Web server RS485 example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinowifiesp/wifiwebrelayserver.aspx
+//		With this example we can communicate send and receive date through RS485 port on our device.
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-mkr-versions-examples/
 // Version: 1.0.0
-// Date: 01.07.2016
+// Date: 20.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-
-// --------------------------------------------------------------------------------
-// Prerequisites:
-//		Before start this example you need:
-//		Connect RS485 (make echo, and configured 19200, 8N1) a device in ProDino RS485 port.
-// Attention:
-//		The Serial (debug port) and RS485 port is same.
 
 #include "KMPProDinoMKRZero.h"
 #include "KMPCommon.h"
@@ -25,16 +19,14 @@
 #define DEBUG
 
 // Enter a MAC address and IP address for your controller below.
-byte _mac[] = { 0x00, 0x08, 0xDC, 0x7D, 0x15, 0x30 };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0xD1, 0x37, 0xB6 };
 // The IP address will be dependent on your local network.
-IPAddress _ip(192, 168, 1, 177);
+IPAddress _ip(192, 168, 1, 198);
 
 // Local port.
 // Port 80 is default for HTTP
 const uint16_t LOCAL_PORT = 80;
 
-// If Post request is valid, read data from RS485.
-bool _isValidPost = false;
 // Initialize the Ethernet server library.
 // with the IP address and port you want to use.
 EthernetServer _server(LOCAL_PORT);
@@ -43,27 +35,30 @@ EthernetServer _server(LOCAL_PORT);
 EthernetClient _client;
 
 /**
-* @brief Execute first after start device. Initialize hardware.
+* @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
+*
 *
 * @return void
 */
 void setup()
 {
+	delay(5000);
 #ifdef DEBUG
 	Serial.begin(115200);
 #endif
 
 	// Init Dino board. Set pins, start W5500.
-	KMPProDinoMKRZero.init(true);
-
+	KMPProDinoMKRZero.init(ProDino_MKR_Zero_Ethernet);
 	// Start RS485 with baud 19200 and 8N1.
 	KMPProDinoMKRZero.RS485Begin(19200);
+
 	// Start the Ethernet connection and the server.
 	Ethernet.begin(_mac, _ip);
 	_server.begin();
 
 #ifdef DEBUG
-	Serial.println("The server is starting.");
+	Serial.println("The example WebRS485 is started.");
+	Serial.println("IPs:");
 	Serial.println(Ethernet.localIP());
 	Serial.println(Ethernet.gatewayIP());
 	Serial.println(Ethernet.subnetMask());
@@ -71,13 +66,14 @@ void setup()
 }
 
 /**
-* @brief Main method.
+* @brief Loop void. Arduino executed second.
+*
 *
 * @return void
 */
-void loop(void)
+void loop() 
 {
-	// Listen for incoming clients.
+	// Waiting for a client.
 	_client = _server.available();
 
 	if (!_client.connected())
@@ -86,74 +82,41 @@ void loop(void)
 	}
 
 #ifdef DEBUG
-	Serial.println("Client connected.");
+	Serial.println(">> Client connected.");
 #endif
 
-	// If client connected On status led.
+	// If client connected switch On status led.
 	KMPProDinoMKRZero.OnStatusLed();
 
 	// Read client request.
-	_isValidPost = ReadClientRequest();
-	
-	// Write client response - html page.
+	ReadClientRequest();
 	WriteClientResponse();
 
-	// Close the connection.
+	// Close the client connection.
 	_client.stop();
 
-	// If client disconnected Off status led.
+	// If client disconnected switch Off status led.
 	KMPProDinoMKRZero.OffStatusLed();
 
 #ifdef DEBUG
-	Serial.println("Client disconnected.");
-	Serial.println("---");
+	Serial.println(">> Client disconnected.");
+	Serial.println();
 #endif
 }
 
-bool ReadHttpRequestLine(EthernetClient* client, String* line)
-{
-	*line = "";
-
-	if (client == NULL)
-	{
-		return false;
-	}
-
-	bool isCRLF = false;
-	int c;
-	while ((c = client->peek()) > -1)
-	{
-		if (c == CH_CR || c == CH_LF)
-		{
-			isCRLF = true;
-		}
-		else
-		{
-			// The line finished and next char isn't CH_CR or CH_LF. 
-			if (isCRLF)
-			{
-				return true;
-			}
-
-			*line += (char)c;
-		}
-#ifdef DEBUG
-		Serial.write(c);
-#endif
-		client->read();
-	}
-
-	// Nothing for read.
-	return false;
-}
-
-/*
-POST / HTTP/1.1
-Host: 192.168.0.177
-Connection: keep-alive
-Content-Length: 5
-
-data=test&btn=Transmit
+/**
+* @brief ReadClientRequest void. Read and parse client request.
+* 	First row of client request is similar to:
+*		GET / HTTP/1.1
+*  -or-
+*       POST / HTTP/1.1
+*       ...
+*
+*       data=test&btn=Transmit
+*
+* You can check communication client-server get program Smart Sniffer: http://www.nirsoft.net/utils/smsniff.html
+*
+* @return bool Returns true if the request was expected.
 */
 bool ReadClientRequest()
 {
@@ -177,45 +140,42 @@ bool ReadClientRequest()
 	Serial.println(lastRow);
 #endif
 
-	// Check is post request.
-	if (!firstRow.startsWith("POST"))
+	// If the request is GET we write only response.
+	if (GetRequestType(firstRow.c_str()) == GET)
 	{
+		return true;
+	}
+
+	// Invalid request type.
+	if (GetRequestType(firstRow.c_str()) != POST || lastRow.length() == 0)
+	{
+#ifdef DEBUG
+		Serial.println(">> Invalid request type.");
+#endif
 		return false;
 	}
-	
-	// Get data
-	int equalPos = lastRow.indexOf('=');
-	int ampersantPos = lastRow.indexOf('&');
 
-	if (equalPos > 0 && ampersantPos > equalPos)
-	{
-		String data = lastRow.substring(equalPos + 1, ampersantPos);
-#ifdef DEBUG
-		Serial.println("--data to send--");
-		Serial.println(data);
-#endif
-		// Send data with RS485.
-		KMPProDinoMKRZero.RS485Write(data.c_str());
-	}
+	// From POST parameters we get data should be send.
+	String dataToSend = GetValue(lastRow, "data");
+
+	// Transmit data.
+	KMPProDinoMKRZero.RS485Write(dataToSend);
 
 #ifdef DEBUG
-	Serial.println("<< End client request.");
+	Serial.println(">> End client request.");
 #endif
 
 	return true;
 }
 
 /**
-* \brief WriteClientResponse void. Write html response.
+* @brief WriteClientResponse void. Write html response.
 *
-* \return void
+*
+* @return void
 */
 void WriteClientResponse()
 {
-#ifdef DEBUG
-	Serial.println("Write client response.");
-#endif
-
 	if (!_client.connected())
 	{
 		return;
@@ -237,48 +197,31 @@ void WriteClientResponse()
 */
 String BuildPage()
 {
-	String page =
-		"<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_MKRZERO) + " - RS485</title></head>"
+	String receivedData = "";
+	int i;
+	// Reading data from the RS485 port.
+	while ((i = KMPProDinoMKRZero.RS485Read()) != -1)
+	{
+		// Adding received data in a buffer.
+		receivedData += (char)i;
+#ifdef DEBUG
+		Serial.write((char)i);
+#endif
+	}
+
+	return "<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_MKRZERO) + " - Web RS485</title></head>"
 		+ "<body><div style='text-align: center'>"
 		+ "<br><hr />"
-		+ "<h1 style = 'color: #0066FF;'>" + String(PRODINO_MKRZERO) + " - RS485 example</h1>"
+		+ "<h1 style = 'color: #0066FF;'>" + String(PRODINO_MKRZERO) + " - Web RS485 example</h1>"
 		+ "<hr /><br><br>"
 		+ "<form method='post'>"
 		+ "<table border='1' width='300' cellpadding='5' cellspacing='0' align='center' style='text-align:center; font-size:large; font-family:Arial,Helvetica,sans-serif;'>"
 		+ "<thead><tr><th width='80%'>Data</th><th>Action</th></tr></thead>"
 		+ "<tbody><tr><td><input type='text' name='data' style='width: 100%'></td>"
 		+ "<td><input type='submit' name='btn' value='Transmit'/></td></tr>"
-		+ "<tr><td>";
-
-	if (_isValidPost)
-	{
-#ifdef DEBUG
-		Serial.println("Read data from RS485.");
-		int readBytes = 0;
-#endif
-		// Read RS485.
-		int i;
-
-		// if i = -1 not data to read.
-		while ((i = KMPProDinoMKRZero.RS485Read()) > -1)
-		{
-#ifdef DEBUG
-			Serial.write((char)i);
-			readBytes++;
-#endif
-			// Convert unsigned char to char.
-			page += (char)i;
-		}
-#ifdef DEBUG
-		Serial.println();
-		Serial.print("Bytes read: ");
-		Serial.println(readBytes);
-#endif
-	}
-
-	return page 
+		+ "<tr><td>"
+		+ receivedData
 		+ "</td><td>Received</td></tr></tbody>"
-		+ "</table></form>"
 		+ "</table></form><br><br><hr /><h1><a href='" + String(URL_KMPELECTRONICS_EU) + "' target='_blank'>Visit " + String(KMP_ELECTRONICS_LTD) + "</a></h1>"
 		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_PRODINO_MKRZERO) + "' target='_blank'>Information about " + String(PRODINO_MKRZERO) + " board</a></h3>"
 		+ "<hr /></div></body></html>";
