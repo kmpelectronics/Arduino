@@ -1,14 +1,14 @@
-// EthBlynkFull.ino
+// BlynkOne.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//		- KMP ProDino MKR Zero Ethernet V1 (https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/)
+//		- KMP ProDino MKR GSM Ethernet V1  (https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/)
 // Description:
-//		Blynk example. For this example need add in Blynk mobile application 4 button (200), 4 LEDs(100) and 2 value display(200). All 1600 points.
-//		Free points in Blynk application is 1200. If you do not want to buy points, use the example: WiFiBlynk.ino
-// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiblynkfull.aspx
+//		Blynk example. For this example need add in Blynk mobile application 4 button, 4 LEDs and 2 value display.
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-mkr-versions-examples/
 // Version: 1.0.0
-// Date: 21.04.2018
+// Date: 25.04.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 // --------------------------------------------------------------------------------
@@ -16,9 +16,9 @@
 //	Before start this example you need to install:
 //		Install Blynk library: Sketch\Include library\Menage Libraries... find Blynk and click Install.
 //		DHT library: https://github.com/adafruit/DHT-sensor-library
-//		Connect DHT22 sensor to GROVE connector. Use pins: 
-//			- first sensor EXT_GROVE_D0, Vcc+, Gnd(-);
-//			- second sensor EXT_GROVE_D1, Vcc+, Gnd(-);
+//		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
+//			- first sensor GROVE_D0, Vcc+, Gnd(-);
+//			- second sensor GROVE_D1, Vcc+, Gnd(-);
 //  PRODINo WiFi-ESP -> Blynk pins map:
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
@@ -37,11 +37,11 @@
 
 #define DEBUG
 //#define BLYNK_DEBUG
-#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
+//#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
 #include <BlynkSimpleEthernet2.h>
 
-// You should get Auth Token in the Blynk App.
-char AUTH_TOKEN[] = "b3f079188ee1434298377c5e58fb8d4e";
+// You have to get your Authentication Token through Blynk Application.
+char AUTH_TOKEN[] = "123456789012345678901234567890123";
 
 // Define sensors structure.
 struct MeasureHT_t
@@ -50,7 +50,7 @@ struct MeasureHT_t
 	bool IsEnable;
 	// Name of sensor. Example: "First sensor".
 	String Name;
-	// DHT object with settings. Example: DHT(EXT_GROVE_D0 /* connected pin */, DHT22 /* sensor type */, 11 /* Constant for ESP8266 */)
+	// DHT object with settings. Example: DHT(GROVE_D0 /* connected pin */, DHT22 /* sensor type */, 11 /* Constant */)
 	DHT dht;
 	// Store, read humidity from sensor.
 	float Humidity;
@@ -69,7 +69,7 @@ MeasureHT_t _measureHT[SENSOR_COUNT] =
 };
 
 // Check sensor data, interval in milliseconds.
-const long CHECK_HT_INTERVAL_MS = 5000;
+const long CHECK_HT_INTERVAL_MS = 10000;
 // Store last measure time.
 unsigned long _mesureTimeout;				
 
@@ -91,18 +91,20 @@ OptoIn_t _optoInputs[OPTOIN_COUNT] =
 };
 
 /**
- * @brief Execute first after start device. Initialize hardware.
- *
- * @return void
- */
-void setup(void)
+* @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
+*
+*
+* @return void
+*/
+void setup()
 {
+	delay(5000);
 #ifdef DEBUG
 	Serial.begin(115200);
 #endif
 
 	// Init Dino board. Set pins, start W5500.
-	KMPProDinoMKRZero.init(true);
+	KMPProDinoMKRZero.init(ProDino_MKR_Zero_Ethernet);
 
 	Blynk.begin(AUTH_TOKEN);
 
@@ -117,30 +119,30 @@ void setup(void)
 	}
 
 	_mesureTimeout = 0;
-
-	ProcessOptoInputs();
 }
 
 /**
- * @brief Main method.
- *
- * @return void
- */
+* @brief Loop void. Arduino executed second.
+*
+*
+* @return void
+*/
 void loop(void)
 {
-	ProcessDHTSensors();
-	ProcessOptoInputs();
+	ProcessDHTSensors(false);
+	ProcessOptoInputs(false);
 
 	Blynk.run();
 }
 
 /**
- * @brief Read data from DHT sensors a specified time and send to Blynk.
+ * @brief Reading temperature and humidity from DHT sensors every X seconds and if data is changed send it to Blynk.
  *
  * @return void
  */
-void ProcessDHTSensors()
+void ProcessDHTSensors(bool force)
 {
+	// Checking if time to measure is occurred
 	if (millis() > _mesureTimeout)
 	{
 		int firstFreeVirtualPin = V9;
@@ -153,12 +155,18 @@ void ProcessDHTSensors()
 			if (measureHT->IsEnable)
 			{
 				measureHT->dht.read(true);
-				measureHT->Humidity = measureHT->dht.readHumidity();
-				measureHT->Temperature = measureHT->dht.readTemperature();
+				float humidity = measureHT->dht.readHumidity();
+				float temperature = measureHT->dht.readTemperature();
 
-				// Write pair of data in pins V9, V10. If have second write V11, V12.
-				Blynk.virtualWrite(firstFreeVirtualPin++, measureHT->Temperature);
-				Blynk.virtualWrite(firstFreeVirtualPin++, measureHT->Humidity);
+				if (measureHT->Humidity != humidity || measureHT->Temperature != temperature || force)
+				{
+					measureHT->Humidity = humidity;
+					measureHT->Temperature = temperature;
+
+					// Write pair of data in pins V9, V10. If have second write V11, V12.
+					Blynk.virtualWrite(firstFreeVirtualPin++, measureHT->Temperature);
+					Blynk.virtualWrite(firstFreeVirtualPin++, measureHT->Humidity);
+				}
 			}
 		}
 
@@ -168,21 +176,21 @@ void ProcessDHTSensors()
 }
 
 /**
-* @brief Read data from opto inputs. Send data if only changes to Blynk.
+* @brief Processing data from isolated inputs. It will send data to Blynk if only the input statuses were changed.
 *
 * @return void
 */
-void ProcessOptoInputs()
+void ProcessOptoInputs(bool force)
 {
 	for (int i = 0; i < OPTOIN_COUNT; i++)
 	{
 		OptoIn_t* optoInput = &_optoInputs[i];
 		bool currentStatus = KMPProDinoMKRZero.GetOptoInState(optoInput->Input);
-		if (optoInput->Status != currentStatus || ((bool)optoInput->Widget.getValue()) == currentStatus)
+		if (optoInput->Status != currentStatus || ((bool)optoInput->Widget.getValue()) != currentStatus || force)
 		{
 			Serial.println("Opto input " + String(i + 1) + " status changed to -> \"" + currentStatus + "\". WidgetLED value: " + optoInput->Widget.getValue());
 
-			currentStatus ? optoInput->Widget.off() : optoInput->Widget.on();
+			currentStatus ? optoInput->Widget.on() : optoInput->Widget.off();
 			optoInput->Status = currentStatus;
 		}
 	}
@@ -198,18 +206,19 @@ void SetRelay(Relay relay, int status)
 	KMPProDinoMKRZero.SetRelayState(relay, status == 1);
 }
 
-// This function will run every time Blynk connection is established
+/*****************************
+* Blynk methods.
+*****************************/
+/**
+ * @brief This function will be run every time when Blynk connection is established.
+ *
+ */
 BLYNK_CONNECTED() {
-	// Request Blynk server to re-send latest values for all pins
+	// Request Blynk server to re-send latest values for all pins.
 	Blynk.syncAll();
 
-	//ProcessOptoInputs();
-	// You can also update individual virtual pins like this:
-	//Blynk.syncVirtual(V0, V2);
-
-	// Let's write your hardware uptime to Virtual Pin 2
-	//int value = millis() / 1000;
-	//Blynk.virtualWrite(V2, value);
+	ProcessDHTSensors(true);
+	ProcessOptoInputs(true);
 }
 
 /**
@@ -255,40 +264,4 @@ BLYNK_WRITE(V3)
 BLYNK_WRITE(V4)
 {
 	SetRelay(Relay4, param.asInt());
-}
-
-/**
- * @brief Get opto input 1 state.
- *			On virtual pin 5.
- */
-BLYNK_READ(V5)
-{
-	Blynk.virtualWrite(V5, KMPProDinoMKRZero.GetOptoInState(OptoIn1));
-}
-
-/**
- * @brief Get opto input 2 state.
- *			On virtual pin 6.
- */
-BLYNK_READ(V6)
-{
-	Blynk.virtualWrite(V6, KMPProDinoMKRZero.GetOptoInState(OptoIn2));
-}
-
-/**
- * @brief Get opto input 3 state.
- *			On virtual pin 7.
- */
-BLYNK_READ(V7)
-{
-	Blynk.virtualWrite(V7, KMPProDinoMKRZero.GetOptoInState(OptoIn3));
-}
-
-/**
- * @brief Get opto input 4 state.
- *			On virtual pin 8.
- */
-BLYNK_READ(V8)
-{
-	Blynk.virtualWrite(V8, KMPProDinoMKRZero.GetOptoInState(OptoIn4));
 }
