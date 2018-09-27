@@ -1,10 +1,10 @@
 // KMPCommon.h
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Description:
-//		Common library.
-// Version: 1.0.0
-// Date: 09.01.2015
+//		This library contains common methods helping us develop examples.
+// Version: 1.3.0
+// Date: 27.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #ifndef _KMPCOMMON_h

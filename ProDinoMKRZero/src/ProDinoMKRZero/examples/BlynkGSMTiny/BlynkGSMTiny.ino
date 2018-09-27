@@ -1,24 +1,25 @@
-// BlynkOne.ino
+// BlynkGSMTiny.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		- KMP ProDino MKR Zero Ethernet V1 (https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/)
-//		- KMP ProDino MKR GSM Ethernet V1  (https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/)
+//		- KMP ProDino MKR GSM V1 https://kmpelectronics.eu/products/prodino-mkr-gsm-v1/
+//		- KMP ProDino MKR GSM Ethernet V1  https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/
 // Description:
-//		Blynk example. For this example need add in Blynk mobile application 4 button, 4 LEDs and 2 value display.
+//		This Blynk example communicate through GSM module.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-mkr-versions-examples/
 // Version: 1.0.0
-// Date: 25.04.2018
+// Date: 27.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 // --------------------------------------------------------------------------------
 // Prerequisites:
 //	Before start this example you need to install:
-//		Install Blynk library: Sketch\Include library\Menage Libraries... find Blynk and click Install.
-//		DHT library: https://github.com/adafruit/DHT-sensor-library
+//		Install Blynk library: Sketch\Include library\Menage Libraries... find ... and click Install.
+//         - Blynk
+//         - TinyGSM
+//         - DHT sensor library by Adafruit
 //		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
-//			- first sensor GROVE_D0, Vcc+, Gnd(-);
-//			- second sensor GROVE_D1, Vcc+, Gnd(-);
+//			- sensor GROVE_D0, Vcc+, Gnd(-);
 //  ProDino MKR series -> Blynk pins map:
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
@@ -36,12 +37,24 @@
 #include <DHT.h>
 
 #define DEBUG
-//#define BLYNK_DEBUG
-//#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
-#include <BlynkSimpleEthernet2.h>
+#define BLYNK_DEBUG
+#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
+
+#define TINY_GSM_MODEM_UBLOX
+
+#include <TinyGsmClient.h>
+#include <BlynkSimpleSIM800.h>
 
 // You have to get your Authentication Token through Blynk Application.
-char AUTH_TOKEN[] = "123456789012345678901234567890123";
+const char AUTH_TOKEN[] = "123456789012345678901234567890123";
+
+const char PINNUMBER[] = "";
+// replace your GPRS APN
+const char GPRS_APN[] = "xxxx"; 
+// replace with your GPRS login
+const char GPRS_LOGIN[] = "xxxx";
+// replace with your GPRS password
+const char GPRS_PASSWORD[] = "xxxx";
 
 // Define sensors structure.
 struct MeasureHT_t
@@ -59,13 +72,12 @@ struct MeasureHT_t
 };
 
 // Sensors count. 
-#define SENSOR_COUNT 2
+#define SENSOR_COUNT 1
 
 // Define array of 2 sensors.
 MeasureHT_t _measureHT[SENSOR_COUNT] =
 {
-	{ true, "Sensor 1", DHT(GROVE_D0, DHT22, 11), NAN, NAN },
-	{ false, "Sensor 2", DHT(GROVE_D1, DHT11, 11), NAN, NAN }
+	{ true, "Sensor 1", DHT(GROVE_D0, DHT22, 11), NAN, NAN }
 };
 
 // Check sensor data, interval in milliseconds.
@@ -90,6 +102,9 @@ OptoIn_t _optoInputs[OPTOIN_COUNT] =
 	{ OptoIn4, WidgetLED(V8), false }
 };
 
+// It supports work with GSM Modem.
+TinyGsm modem(SerialGSM);
+
 /**
 * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
 *
@@ -101,12 +116,35 @@ void setup()
 	delay(5000);
 #ifdef DEBUG
 	Serial.begin(115200);
+	Serial.println("The example BlynkGSMTiny is starting...");
 #endif
 
-	// Init Dino board. Set pins, start W5500.
-	KMPProDinoMKRZero.init(ProDino_MKR_Zero_Ethernet);
+	// Init Dino board. Set pins, start GSM.
+	KMPProDinoMKRZero.init(ProDino_MKR_GSM);
 
-	Blynk.begin(AUTH_TOKEN);
+#ifdef DEBUG
+	Serial.println("Initializing modem...");
+#endif
+	modem.init();
+
+	String modemInfo = modem.getModemInfo();
+	if (modemInfo == "")
+	{
+#ifdef DEBUG
+		Serial.println("Modem is not started!!!");
+#endif
+		while (true) {}
+	}
+
+	// Unlock your SIM card if it locked with a PIN code. 
+	// If PIN is not valid don't try more than 3 time because the SIM card locked and need unlock with a PUK code.
+	if (strlen(PINNUMBER) > 0 && !modem.simUnlock(PINNUMBER))
+	{
+#ifdef DEBUG
+		Serial.println("PIN code is not valid! STOP!!!");
+#endif
+		while (true) {}
+	}
 
 	// Starts DHT sensors.
 	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
@@ -119,9 +157,12 @@ void setup()
 	}
 
 	_mesureTimeout = 0;
+
 #ifdef DEBUG
-	Serial.println("The example BlynkOne is started.");
+	Serial.println("The example BlynkGSMTiny is started.");
 #endif
+
+	Blynk.begin(AUTH_TOKEN, modem, GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD);
 }
 
 /**

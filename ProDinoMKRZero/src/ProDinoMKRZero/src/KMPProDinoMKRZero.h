@@ -1,13 +1,16 @@
-// KMPDinoZeroEth.h
+// KMPProDinoMKRZero.h
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards: 
-//		ProDino MKR Zero ??? (http://www.kmpelectronics.eu/en-us/products/prodinozero-eth.aspx)
+//		- KMP ProDino MKR Zero V1 https://kmpelectronics.eu/products/prodino-mkr-zero-v1/
+//		- KMP ProDino MKR Zero Ethernet V1 https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/
+//		- KMP ProDino MKR GSM V1 https://kmpelectronics.eu/products/prodino-mkr-gsm-v1/
+//		- KMP ProDino MKR GSM Ethernet V1  https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/
 // Description:
-//		Header for KMP Dino Zero Eth board.
-// Version: 1.0.0
-// Date: 15.03.2018
-// Authors: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
+//		Library for supported board. It contains base methods to work with boards.
+// Version: 1.1.0
+// Date: 27.09.2018
+// Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
 #ifndef _KMPPRODINOMKRZERO_H
 #define _KMPPRODINOMKRZERO_H
@@ -76,11 +79,19 @@ class KMPProDinoMKRZeroClass
 	* @brief Initialize KMP ProDino MKR Zero board.
 	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
 	* @param board Initialize specific bard. Mandatory.
-	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet is stopped.
+	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet stays stop.
+	* @param startGSM If board has a GSM we can stop it if it isn't necessary. If true - starts GSM module or false - the GSM stays stop.
 	*
 	* @return void
 	*/
-	void init(BoardType board, bool startEthernet);
+	void init(BoardType board, bool startEthernet, bool startGSM);
+
+	/**
+	* @brief Restarts (Stop & Start) GSM module.
+	*
+	* @return void
+	*/
+	void RestartGSM();
 
 	/**
 	* @brief Restarts (Stop & Start) Ethernet.
@@ -285,6 +296,7 @@ class KMPProDinoMKRZeroClass
 
 	private:
 		void InitEthernet(bool startEthernet);
+		void InitGSM(bool startGSM);
 };
 
 extern KMPProDinoMKRZeroClass KMPProDinoMKRZero;

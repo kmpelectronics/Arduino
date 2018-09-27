@@ -1,13 +1,15 @@
-// KMPDinoZero.cpp
+// KMPProDinoMKRZero.cpp
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards: 
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//		- KMP ProDino MKR Zero V1 https://kmpelectronics.eu/products/prodino-mkr-zero-v1/
+//		- KMP ProDino MKR Zero Ethernet V1 https://kmpelectronics.eu/products/prodino-mkr-zero-ethernet-v1/
+//		- KMP ProDino MKR GSM V1 https://kmpelectronics.eu/products/prodino-mkr-gsm-v1/
+//		- KMP ProDino MKR GSM Ethernet V1  https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/
 // Description:
-//		Source file for KMP Dino WiFi board.
-// Version: 1.0.1
-// 	Fix RS485Read operation
-// Date: 30.10.2016
+//		Library for supported board. It contains base methods to work with boards.
+// Version: 1.1.0
+// Date: 27.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
 #include "KMPProDinoMKRZero.h"
@@ -53,10 +55,10 @@ BoardType _board;
 
 void KMPProDinoMKRZeroClass::init(BoardType board)
 {
-	init(board, true);
+	init(board, true, true);
 }
 
-void KMPProDinoMKRZeroClass::init(BoardType board, bool startEthernet)
+void KMPProDinoMKRZeroClass::init(BoardType board, bool startEthernet, bool startGSM)
 {
 	_board = board;
 
@@ -71,7 +73,7 @@ void KMPProDinoMKRZeroClass::init(BoardType board, bool startEthernet)
 	pinMode(OptoIn2Pin, INPUT);
 	pinMode(OptoIn3Pin, INPUT);
 	pinMode(OptoIn4Pin, INPUT);
-	
+
 	// Set status led output pin.
 	pinMode(StatusLedPin, OUTPUT);
 	digitalWrite(StatusLedPin, LOW);
@@ -81,6 +83,7 @@ void KMPProDinoMKRZeroClass::init(BoardType board, bool startEthernet)
 	digitalWrite(RS485Pin, RS485Receive);
 
 	InitEthernet(startEthernet);
+	InitGSM(startGSM);
 }
 
 void KMPProDinoMKRZeroClass::InitEthernet(bool startEthernet)
@@ -100,6 +103,34 @@ void KMPProDinoMKRZeroClass::InitEthernet(bool startEthernet)
 			digitalWrite(W5500ResetPin, LOW);
 		}
 	}
+}
+
+void KMPProDinoMKRZeroClass::InitGSM(bool startGSM)
+{
+	if (_board == ProDino_MKR_GSM || _board == ProDino_MKR_GSM_Ethernet)
+	{
+		// Start serial communication with the GSM modem
+		SerialGSM.begin(115200);
+
+		// Turn on the GSM module by triggering GSM_RESETN pin
+		pinMode(GSM_RESETN, OUTPUT);
+		if (startGSM)
+		{
+			RestartGSM();
+		}
+		else
+		{
+			digitalWrite(GSM_RESETN, HIGH);
+		}
+	}
+}
+
+void KMPProDinoMKRZeroClass::RestartGSM()
+{
+	// Reset occurs when a low level is applied to the RESET_N pin, which is normally set high by an internal pull-up, for a valid time period min 10 mS
+	digitalWrite(GSM_RESETN, HIGH);
+	delay(20);
+	digitalWrite(GSM_RESETN, LOW);
 }
 
 void KMPProDinoMKRZeroClass::RestartEthernet()
@@ -146,7 +177,7 @@ void KMPProDinoMKRZeroClass::SetRelayState(uint8_t relayNumber, bool state)
 	{
 		return;
 	}
-	
+
 	digitalWrite(Relay_Pins[relayNumber], state);
 }
 
@@ -229,7 +260,7 @@ void KMPProDinoMKRZeroClass::RS485End()
 }
 
 /**
-* @brief Begin write data to RS485. 
+* @brief Begin write data to RS485.
 *
 * @return void
 */
@@ -271,7 +302,7 @@ size_t KMPProDinoMKRZeroClass::RS485Write(const char* data)
 
 	size_t len = strlen(data);
 	size_t result = 0;
-	while(len > 0)
+	while (len > 0)
 	{
 		result += RS485Serial.write(*data++);
 		--len;
