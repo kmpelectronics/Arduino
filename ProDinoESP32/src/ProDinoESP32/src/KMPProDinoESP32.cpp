@@ -42,7 +42,13 @@ HardwareSerial RS485Serial(1);
 #define GSMResetPin 2   // GPIO2
 #define GSMCTSPin   13  // GPIO13
 #define GSMRTSPin   15  // GPIO15
-HardwareSerial SerialGSM(2);
+
+#define LoraRxPin    13  // GPIO13
+#define LoraTxPin    16  // GPIO16
+//#define LoraBoot0    ? // It isn't connected at the moment
+#define LoraResetPin 0   // GPIO0
+#define LoraRTSPin   15  // GPIO15
+HardwareSerial SerialModem(2);
 
 /**
  * @brief Relay pins.
@@ -59,12 +65,14 @@ const int OPTOIN_PINS[OPTOIN_COUNT] =
 KMPProDinoESP32Class KMPProDinoESP32;
 BoardType _board;
 
+uint32_t _TxFlushDelayuS;
+
 void KMPProDinoESP32Class::init(BoardType board)
 {
 	init(board, true, true);
 }
 
-void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startGSM)
+void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startModem)
 {
 	_board = board;
 
@@ -89,7 +97,8 @@ void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startG
 	digitalWrite(RS485Pin, RS485Receive);
 
 	InitEthernet(startEthernet);
-	InitGSM(startGSM);
+	InitGSM(startModem);
+	InitLoRa(startModem);
 }
 
 void KMPProDinoESP32Class::InitEthernet(bool startEthernet)
@@ -116,7 +125,7 @@ void KMPProDinoESP32Class::InitGSM(bool startGSM)
 	if (_board == ProDino_ESP32_GSM || _board == ProDino_ESP32_GSM_Ethernet)
 	{
 		// Start serial communication with the GSM modem.
-		SerialGSM.begin(115200, SERIAL_8N1, GSMRxPin, GSMTxPin);
+		SerialModem.begin(115200, SERIAL_8N1, GSMRxPin, GSMTxPin);
 
 		// Turn on the GSM module by triggering GSM_RESETN pin.
 		pinMode(GSMResetPin, OUTPUT);
@@ -129,13 +138,59 @@ void KMPProDinoESP32Class::InitGSM(bool startGSM)
 			ResetGSMOn();
 		}
 
+		// The GSM pin is output.
 		pinMode(GSMCTSPin, INPUT);
 		
+		// RTS pin should be in LOW to the GSM modem works.
 		pinMode(GSMRTSPin, OUTPUT);
-		//digitalWrite(GSMRTSPin, HIGH);
 		digitalWrite(GSMRTSPin, LOW);
 	}
 }
+
+void KMPProDinoESP32Class::InitLoRa(bool startLora)
+{
+	if (_board == ProDino_ESP32_LoRa || _board == ProDino_ESP32_Lora_Ethernet)
+	{
+		// Start serial communication with the GSM modem.
+		SerialModem.begin(19200, SERIAL_8N1, LoraRxPin, LoraTxPin);
+
+		// Turn on the Lora module by triggering LoraResetPin pin.
+		pinMode(LoraResetPin, OUTPUT);
+		if (startLora)
+		{
+			RestartLora();
+		}
+		else
+		{
+			ResetLoraOn();
+		}
+
+		pinMode(LoraRTSPin, OUTPUT);
+		digitalWrite(LoraRTSPin, LOW);
+
+		//SerialModem.setTimeout(1);
+	}
+}
+
+void KMPProDinoESP32Class::RestartLora()
+{
+	// Reset occurs when a low level is applied to the RESET_N pin, which is normally set high by an internal pull-up, for a valid time period min 10 mS.
+	ResetLoraOn();
+	delay(200);
+	ResetLoraOff();
+	delay(200);
+}
+
+void KMPProDinoESP32Class::ResetLoraOn()
+{
+	digitalWrite(LoraResetPin, LOW);
+}
+
+void KMPProDinoESP32Class::ResetLoraOff()
+{
+	digitalWrite(LoraResetPin, HIGH);
+}
+
 
 void KMPProDinoESP32Class::RestartGSM()
 {
@@ -275,6 +330,7 @@ void KMPProDinoESP32Class::RS485Begin(unsigned long baud)
 void KMPProDinoESP32Class::RS485Begin(unsigned long baud, uint32_t config)
 {
 	RS485Serial.begin(baud, config, RS485RxPin, RS485TxPin);
+	_TxFlushDelayuS = (uint32_t)((1000000 / baud) * 15);
 }
 
 void KMPProDinoESP32Class::RS485End()
@@ -290,7 +346,8 @@ void KMPProDinoESP32Class::RS485End()
 void RS485BeginWrite()
 {
 	digitalWrite(RS485Pin, RS485Transmit);
-	delay(1);
+	// Allowing pin should delay for 50 nS
+	delayMicroseconds(70);
 }
 
 /**
@@ -301,7 +358,7 @@ void RS485BeginWrite()
 void RS485EndWrite()
 {
 	RS485Serial.flush();
-	delay(2);
+	delayMicroseconds(_TxFlushDelayuS);
 	digitalWrite(RS485Pin, RS485Receive);
 }
 

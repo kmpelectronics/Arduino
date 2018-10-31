@@ -54,14 +54,16 @@ enum BoardType {
 	ProDino_ESP32 = 1,
 	ProDino_ESP32_Ethernet = 2,
 	ProDino_ESP32_GSM = 3,
-	ProDino_ESP32_GSM_Ethernet = 4
+	ProDino_ESP32_GSM_Ethernet = 4,
+	ProDino_ESP32_LoRa = 5,
+	ProDino_ESP32_Lora_Ethernet = 6
 };
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
 const char PRODINO_ESP32[] = "ProDino ESP32";
 const char URL_KMPELECTRONICS_EU_PRODINO_ESP32[] = "https://kmpelectronics.eu/product-category/arduino-esp32/";
 
-extern HardwareSerial SerialGSM;
+extern HardwareSerial SerialModem;
 
 class KMPProDinoESP32Class
 {
@@ -79,11 +81,11 @@ class KMPProDinoESP32Class
 	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
 	* @param board Initialize specific bard. Mandatory.
 	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet stays stop.
-	* @param startGSM If board has a GSM we can stop it if it isn't necessary. If true - starts GSM module or false - the GSM stays stop.
+	* @param startModem If board has a GSM we can stop it if it isn't necessary. If true - starts GSM module or false - the GSM stays stop.
 	*
 	* @return void
 	*/
-	void init(BoardType board, bool startEthernet, bool startGSM);
+	void init(BoardType board, bool startEthernet, bool startModem);
 
 	/**
 	* @brief Restarts (Stop & Start) GSM module.
@@ -299,6 +301,10 @@ class KMPProDinoESP32Class
 		void InitGSM(bool startGSM);
 		void ResetGSMOn();
 		void ResetGSMOff();
+		void InitLoRa(bool startLora);
+		void RestartLora();
+		void ResetLoraOn();
+		void ResetLoraOff();
 };
 
 extern KMPProDinoESP32Class KMPProDinoESP32;
