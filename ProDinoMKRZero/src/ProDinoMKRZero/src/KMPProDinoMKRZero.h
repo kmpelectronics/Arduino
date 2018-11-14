@@ -62,7 +62,7 @@ enum BoardType {
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
 const char PRODINO_MKRZERO[] = "ProDino MKR Zero series";
-const char URL_KMPELECTRONICS_EU_PRODINO_MKRZERO[] = "https://kmpelectronics.eu/product-category/arduino-mkr-zero/";
+const char URL_KMPELECTRONICS_EU_PRODINO_MKRZERO[] = "https://kmpelectronics.eu/products/";
 
 class KMPProDinoMKRZeroClass
 {

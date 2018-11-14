@@ -48,11 +48,14 @@ const char CH_E = 'E';
 const char CH_EQUAL = '=';
 const char W_ON[] = "On";
 const char W_OFF[] = "Off";
+const char W_ON_S[] = "on";
+const char W_OFF_S[] = "off";
+const char W_OK[] = "OK";
 const char W_GET[] = "GET";
 const char W_POST[] = "POST";
 const char KMP_ELECTRONICS_LTD[] = "KMP Electronics Ltd.";
-const char URL_KMPELECTRONICS_EU[] = "http://kmpelectronics.eu/";
-const char HEADER_200_TEXT_HTML[] = "HTTP / 1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+const char URL_KMPELECTRONICS_EU[] = "https://kmpelectronics.eu/";
+const char HEADER_200_TEXT_HTML[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 
 struct TimeSpan
 {
@@ -112,12 +115,12 @@ bool atoip(char *data, uint8_t* result);
  *                  - true - convert OK;
  *                  - false - error converting.
  */
-bool atoUint8(char *data, uint8_t& result);
+bool atoUint8(char *data, uint8_t* result);
 
 /**
- * \brief Check if "text" start with "findTxt".
+ * \brief Check if "text" start with prefix.
  * 
- * \param text In which will search "findTxt".
+ * \param text In which will search.
  * \param findTxt Text to find.
  * \param caseSensitive Check case sensitive if true or case insensitive chars. Default false.
  * 
@@ -125,7 +128,34 @@ bool atoUint8(char *data, uint8_t& result);
  *                  - true - "text" start with "findTxt";
  *                  - false - "text" not start with "findTxt".
  */
-bool startsWith(const char* text, const char* findTxt, bool caseSensitive = false);
+bool startsWith(const char* str, const char* prefix/*, bool caseSensitive = false*/);
+bool startsWith(const char* str, size_t startPos, const char* prefix);
+
+bool endsWith(const char* str, const char* suffix);
+
+bool startAndEndWith(const char* str, const char* prefix, const char* suffix);
+
+void removeStart(char *str, size_t n);
+
+void removeEnd(char *str, size_t n);
+
+bool isEqual(const char *strFirst, const char *strSecond);
+
+bool isEqual(const char *strFirst, const char *strSecond, size_t length);
+
+float roundF(float f, uint8_t precision);
+
+#define CHECK_ENUM(var,enm) ((var & enm) != 0)
+
+/**
+* @brief Concatenate parameters in buffer.
+* @param buffer A buffer in which concatenates string parameter.
+* @param num Numbers of parameters.
+* @param ... parameters separated with comma. The values should be of type char*. Example: "house", "/", "bedroom"
+*
+* @return void
+*/
+void strConcatenate(char* buffer, int num, ...);
 
 /**
  * \brief Convert ip address (array of bytes) to string.
