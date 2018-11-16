@@ -174,12 +174,20 @@ void publishTopic(DataType dataType, int num = 0, bool isPrintPublish = true)
 		publishTopic(Temperature, 0, false);
 		publishTopic(Humidity, 0, false);
 		break;
+	case AllRelaysState:
+		for (size_t i = 0; i < RELAY_COUNT; i++)
+			publishTopic(RelayState, i, false);
+		break;
 	case RelayState:
 		IntToChars(num + 1, numBuff);
 		// kmp/prodinomkrzero/relay/1:On
 		MqttTopicHelper.buildTopicWithMT(_topicBuff, 2, RELAY_TOPIC, numBuff);
 		topic = _topicBuff;
 		payload = KMPProDinoMKRZero.GetRelayState(num) ? W_ON_S : W_OFF_S;
+		break;
+	case AllInputsState:
+		for (size_t i = 0; i < OPTOIN_COUNT; i++)
+			publishTopic(InputState, i, false);
 		break;
 	case InputState:
 		IntToChars(num + 1, numBuff);
@@ -284,9 +292,13 @@ void callback(char* topics, byte* payload, unsigned int payloadLen)
 			bool isOn = isEqual(payloadStr, W_ON_S);
 			if (isOn || isEqual(payloadStr, W_OFF_S))
 			{
-				// Set relay new state.
-				KMPProDinoMKRZero.SetRelayState(relNum, isOn);
 				printSubscribeTopic(topics, payload, payloadLen);
+				// Set relay new state.
+				if (KMPProDinoMKRZero.GetRelayState(relNum) != isOn)
+					KMPProDinoMKRZero.SetRelayState(relNum, isOn);
+				else
+					// Publish current relay state.
+					publishTopic(RelayState, relNum);
 			}
 		}
 		return;

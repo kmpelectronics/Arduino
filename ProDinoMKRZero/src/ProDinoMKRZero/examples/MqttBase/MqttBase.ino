@@ -328,9 +328,13 @@ void callback(char* topics, byte* payload, unsigned int payloadLen)
 			bool isOn = isEqual(payloadStr, W_ON_S);
 			if (isOn || isEqual(payloadStr, W_OFF_S))
 			{
-				// Set relay new state.
-				KMPProDinoMKRZero.SetRelayState(relNum, isOn);
 				printSubscribeTopic(topics, payload, payloadLen);
+				// Set relay new state.
+				if (KMPProDinoMKRZero.GetRelayState(relNum) != isOn)
+					KMPProDinoMKRZero.SetRelayState(relNum, isOn);
+				else
+					// Publish current relay state.
+					publishTopic(RelayState, relNum);
 			}
 		}
 		return;
