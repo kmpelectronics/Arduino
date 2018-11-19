@@ -52,14 +52,10 @@ enum DataType {
 };
 
 // MQTT server settings. 
-//const char* MQTT_SERVER = "xxx.cloudmqtt.com"; // Change it with yours data.
-//const int MQTT_PORT = 12345; // Change it with yours data.
-//const char* MQTT_USER = "xxxxx"; // Change it with yours data.
-//const char* MQTT_PASS = "xxxxx"; // Change it with yours data.
-const char* MQTT_SERVER = "m21.cloudmqtt.com"; // Change it with yours data.
-const int MQTT_PORT = 13161; // Change it with yours data.
-const char* MQTT_USER = "lqnxfvdl"; // Change it with yours data.
-const char* MQTT_PASS = "wRvBhKRm55PD"; // Change it with yours data.
+const char* MQTT_SERVER = "xxx.cloudmqtt.com"; // Change it with yours data.
+const int MQTT_PORT = 12345; // Change it with yours data.
+const char* MQTT_USER = "xxxxx"; // Change it with yours data.
+const char* MQTT_PASS = "xxxxx"; // Change it with yours data.
 const char* MQTT_CLIENT_ID = "ProDinoMKRZeroClient";
 
 const char* BASE_TOPIC = "kmp"; // Base topic for all devices in this network. It can use for broadcast devices
