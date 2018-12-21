@@ -99,8 +99,6 @@ OptoIn_t _optoInputs[OPTOIN_COUNT] =
 // It supports work with GSM Modem.
 TinyGsm modem(SerialModem);
 
-const char SSID[] = "SweetHome2F";
-const char SSID_PASSWORD[] = "kS3#%[h?g;U";
 const uint8_t HTTP_PORT = 80;
 
 // Define text colors.

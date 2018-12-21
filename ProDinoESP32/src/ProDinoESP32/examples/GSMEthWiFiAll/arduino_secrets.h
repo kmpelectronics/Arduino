@@ -9,3 +9,6 @@
  const char GPRS_LOGIN[] = "xxxx";
  // replace with your GPRS password
  const char GPRS_PASSWORD[] = "xxxx";
+
+ const char SSID[] = "";
+ const char SSID_PASSWORD[] = "";
