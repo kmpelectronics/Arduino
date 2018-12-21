@@ -1,12 +1,19 @@
 // KMPProDinoESP32.h
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
-// Supported board: 
-//		KMP ProDino ESP32 https://kmpelectronics.eu/products/prodino-esp32-v1/
+// Web: https://kmpelectronics.eu/
+// Supported boards: 
+//		KMP ProDino ESP32 V1 https://kmpelectronics.eu/products/prodino-esp32-v1/
+//		KMP ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
+//		KMP ProDino ESP32 GSM V1 https://kmpelectronics.eu/products/prodino-esp32-gsm-v1/
+//		KMP ProDino ESP32 LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-lora-v1/
+//		KMP ProDino ESP32 LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-lora-rfm-v1/
+//		KMP ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
+//		KMP ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
+//		KMP ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
 // Description:
-//		Header for KMP Dino WiFi ESP32 board.
-// Version: 0.0.1
-// Date: 05.10.2018
+//		Header for KMP ProDino ESP32 boards.
+// Version: 0.5.0
+// Date: 20.12.2018
 // Authors: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
 #ifndef _KMPPRODINOESP32_H
@@ -15,16 +22,39 @@
 #include <Arduino.h>
 #include <Ethernet2.h>
 #include <HardwareSerial.h>
+#include "MCP23S08.h"
+#include "NeoPixelBus.h"
 
-// Inputs and outputs count.
+// Relays count
 #define RELAY_COUNT  4
+// Inputs count
 #define OPTOIN_COUNT 4
+
+// Expander interrupt pin 
+#define MCP23S08IntetuptPin 36  // IO36
 
 /**
  * @brief A Grove connector pins
  */
-#define	GROVE_D0	22 // GPIO22
-#define	GROVE_D1	21 // GPIO21
+#define	GROVE_D0	22 // IO22
+#define	GROVE_D1	21 // IO21
+
+ /**
+  * @brief J14 connector
+  */
+//#define	J14_1	GND
+//#define	J14_2	5V
+//#define	J14_3	GND
+//#define	J14_4	3V3
+#define	J14_5	35 // I35
+#define	J14_6	27 // IO27
+#define	J14_7	34 // I34
+#define	J14_8	25 // IO25
+#define	J14_9	26 // IO26
+#define	J14_10	14 // IO14
+#define	J14_11	13 // IO13
+#define	J14_12	15 // IO15
+
 
 /**
  * @brief Relays.
@@ -50,18 +80,29 @@ enum OptoIn {
  * @brief All available bards.
  */
 enum BoardType {
-	None = 0,
-	ProDino_ESP32 = 1,
-	ProDino_ESP32_Ethernet = 2,
-	ProDino_ESP32_GSM = 3,
-	ProDino_ESP32_GSM_Ethernet = 4,
-	ProDino_ESP32_LoRa = 5,
-	ProDino_ESP32_Lora_Ethernet = 6
+	ProDino_ESP32,
+	ProDino_ESP32_Ethernet,
+	ProDino_ESP32_GSM,
+	ProDino_ESP32_LoRa,
+	ProDino_ESP32_LoRa_RFM,
+	ProDino_ESP32_Ethernet_GSM,
+	ProDino_ESP32_Ethernet_LoRa,
+	ProDino_ESP32_Ethernet_LoRa_RFM
 };
+
+#define BOARDS_COUNT ProDino_ESP32_Ethernet_LoRa_RFM + 1
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
 const char PRODINO_ESP32[] = "ProDino ESP32";
-const char URL_KMPELECTRONICS_EU_PRODINO_ESP32[] = "https://kmpelectronics.eu/product-category/arduino-esp32/";
+const char URL_KMPELECTRONICS_EU_PRODINO_ESP32[] = "https://kmpelectronics.eu/products/prodino-esp32/";
+
+extern RgbColor yellow;
+extern RgbColor orange;
+extern RgbColor red;
+extern RgbColor green;
+extern RgbColor blue;
+extern RgbColor white;
+extern RgbColor black;
 
 extern HardwareSerial SerialModem;
 
@@ -80,8 +121,8 @@ class KMPProDinoESP32Class
 	* @brief Initialize KMP ProDino MKR Zero board.
 	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
 	* @param board Initialize specific bard. Mandatory.
-	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet stays stop.
-	* @param startModem If board has a GSM we can stop it if it isn't necessary. If true - starts GSM module or false - the GSM stays stop.
+	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet stays stopped.
+	* @param startModem If board has GSM or LoRa module we can stop it if it isn't necessary. If true - starts module or false - the module stays stopped.
 	*
 	* @return void
 	*/
@@ -101,32 +142,32 @@ class KMPProDinoESP32Class
 	*/
 	void RestartEthernet();
 
-	///**
-	//* @brief Get current status LED status.
-	//*
-	//* @return bool If equals - true LED On, else Off.
-	//*/
-	//bool GetStatusLed();
-	///**
-	//* @brief Set status LED new state.
-	//*
-	//* @param on A new status: true - On, false - Off.
-	//*
-	//* @return void
-	//*/
-	//void SetStatusLed(bool state);
+	/**
+	* @brief Get status LED current color.
+	*
+	* @return RgbColor RGB color.
+	*/
+	RgbColor GetStatusLed();
+	/**
+	* @brief Set status LED new color.
+	*
+	* @param color A new RGB color.
+	*
+	* @return void
+	*/
+	void SetStatusLed(RgbColor color);
 	///**
 	//* @brief Set status LED to On.
 	//*
 	//* @return void
 	//*/
 	//void OnStatusLed();
-	///**
-	//* @brief Set status LED to Off.
-	//*
-	//* @return void
-	//*/
-	//void OffStatusLed();
+	/**
+	* @brief Set status LED to Off.
+	*
+	* @return void
+	*/
+	void OffStatusLed();
 	///**
 	//* @brief Invert status LED state. If it is On set to Off or inverse.
 	//*
@@ -302,9 +343,9 @@ class KMPProDinoESP32Class
 		void ResetGSMOn();
 		void ResetGSMOff();
 		void InitLoRa(bool startLora);
-		void RestartLora();
-		void ResetLoraOn();
-		void ResetLoraOff();
+		void RestartLoRa();
+		void ResetLoRaOn();
+		void ResetLoRaOff();
 };
 
 extern KMPProDinoESP32Class KMPProDinoESP32;

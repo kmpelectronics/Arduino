@@ -3,7 +3,7 @@
 // Web: https://kmpelectronics.eu/
 // Supported boards:
 //		- KMP ProDino ESP32 GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-v1/)
-//		- KMP ProDino ESP32 GSM Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
+//		- KMP ProDino ESP32 Ethernet GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-GSM-v1/)
 // Description:
 //		This Blynk example communicate through GSM module.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-esp32-versions-examples/
@@ -16,9 +16,10 @@
 //		Install Blynk library: Sketch\Include library\Menage Libraries... find ... and click Install.
 //         - Blynk
 //         - TinyGSM
-//         - DHT sensor library by Adafruit
+//         - SimpleDHT by Winlin
 //		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
 //			- sensor GROVE_D0, Vcc+, Gnd(-);
+//		You have to fill fields in arduino_secrets.h file.
 //  ProDino MKR series -> Blynk pins map:
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
@@ -34,26 +35,16 @@
 #include "KMPProDinoESP32.h"
 #include "KMPCommon.h"
 #include <SimpleDHT.h>
+#include "arduino_secrets.h"
 
 #define DEBUG
-//#define BLYNK_DEBUG
-#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
 
 #define TINY_GSM_MODEM_UBLOX
-
 #include <TinyGsmClient.h>
+
+//#define BLYNK_DEBUG
+#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
 #include <BlynkSimpleSIM800.h>
-
-// You have to get your Authentication Token through Blynk Application.
-const char AUTH_TOKEN[] = "123456789012345678901234567890123";
-
-const char PINNUMBER[] = "";
-// replace your GPRS APN
-const char GPRS_APN[] = "xxxx"; 
-// replace with your GPRS login
-const char GPRS_LOGIN[] = "xxxx";
-// replace with your GPRS password
-const char GPRS_PASSWORD[] = "xxxx";
 
 // Define sensors structure.
 struct MeasureHT_t
@@ -102,7 +93,11 @@ OptoIn_t _optoInputs[OPTOIN_COUNT] =
 };
 
 // It supports work with GSM Modem.
-TinyGsm modem(SerialGSM);
+TinyGsm modem(SerialModem);
+
+const long LED_STATUS_INTERVAL_MS = 1000;
+unsigned long _ledStatusTimeout = 0;
+bool _ledState = false;
 
 /**
 * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
@@ -120,6 +115,8 @@ void setup()
 
 	// Init Dino board. Set pins, start GSM.
 	KMPProDinoESP32.init(ProDino_ESP32_GSM);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
+	KMPProDinoESP32.SetStatusLed(blue);
 
 #ifdef DEBUG
 	Serial.println("Initializing modem...");
@@ -156,6 +153,8 @@ void setup()
 #endif
 
 	Blynk.begin(AUTH_TOKEN, modem, GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD);
+
+	KMPProDinoESP32.OffStatusLed();
 }
 
 /**
@@ -166,10 +165,33 @@ void setup()
 */
 void loop(void)
 {
+	ShowStatus();
+
 	ProcessDHTSensors(false);
 	ProcessOptoInputs(false);
 
 	Blynk.run();
+}
+
+void ShowStatus()
+{
+	if (millis() > _mesureTimeout)
+	{
+		_ledState = !_ledState;
+
+		if (_ledState)
+		{
+			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
+			KMPProDinoESP32.SetStatusLed(green);
+		}
+		else
+		{
+			KMPProDinoESP32.OffStatusLed();
+		}
+
+		// Set next time to read data.
+		_mesureTimeout = millis() + LED_STATUS_INTERVAL_MS;
+	}
 }
 
 /**

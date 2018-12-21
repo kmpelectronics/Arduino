@@ -52,7 +52,7 @@ const char W_GET[] = "GET";
 const char W_POST[] = "POST";
 const char KMP_ELECTRONICS_LTD[] = "KMP Electronics Ltd.";
 const char URL_KMPELECTRONICS_EU[] = "http://kmpelectronics.eu/";
-const char HEADER_200_TEXT_HTML[] = "HTTP / 1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+const char HEADER_200_TEXT_HTML[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 
 struct TimeSpan
 {

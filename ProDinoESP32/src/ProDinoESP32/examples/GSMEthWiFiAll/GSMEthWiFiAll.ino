@@ -2,7 +2,7 @@
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		- KMP ProDino ESP32 GSM Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
+//		- KMP ProDino ESP32 Ethernet GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-GSM-v1/)
 // Description:
 //		This Blynk example communicate through GSM module.
 //      Test all: WiFi, relays, inputs, RS485, GROVE connector.
@@ -17,9 +17,10 @@
 //		Install Blynk library: Sketch\Include library\Menage Libraries... find ... and click Install.
 //         - Blynk
 //         - TinyGSM
-//         - DHT sensor library by Adafruit
+//         - SimpleDHT by Winlin
 //		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
 //			- sensor GROVE_D0, Vcc+, Gnd(-);
+//		You have to fill fields in arduino_secrets.h file.
 //  ProDino MKR series -> Blynk pins map:
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
@@ -35,6 +36,7 @@
 #include "KMPProDinoESP32.h"
 #include "KMPCommon.h"
 #include <SimpleDHT.h>
+#include "arduino_secrets.h"
 
 #define DEBUG
 //#define BLYNK_DEBUG
@@ -47,17 +49,6 @@
 
 #include <WiFi.h>
 #include <WiFiClient.h>
-
-// You have to get your Authentication Token through Blynk Application.
-const char AUTH_TOKEN[] = "123456789012345678901234567890123";
-
-const char PINNUMBER[] = "";
-// replace your GPRS APN
-const char GPRS_APN[] = "xxxx"; 
-// replace with your GPRS login
-const char GPRS_LOGIN[] = "xxxx";
-// replace with your GPRS password
-const char GPRS_PASSWORD[] = "xxxx";
 
 // Define sensors structure.
 struct MeasureHT_t
@@ -96,7 +87,7 @@ struct OptoIn_t
 	bool Status;
 };
 
-// Store opto input data, settings and processing objects.
+// Storing opto input data, settings and processing objects.
 OptoIn_t _optoInputs[OPTOIN_COUNT] =
 {
 	{ OptoIn1, WidgetLED(V5), false },
@@ -106,7 +97,7 @@ OptoIn_t _optoInputs[OPTOIN_COUNT] =
 };
 
 // It supports work with GSM Modem.
-TinyGsm modem(SerialGSM);
+TinyGsm modem(SerialModem);
 
 const char SSID[] = "SweetHome2F";
 const char SSID_PASSWORD[] = "kS3#%[h?g;U";
@@ -126,6 +117,10 @@ byte _mac[] = { 0x00, 0x08, 0xDC, 0xF9, 0x90, 0x4E };
 IPAddress _ip(192, 168, 1, 197);
 EthernetServer _ethServer(HTTP_PORT);
 
+const long LED_STATUS_INTERVAL_MS = 1000;
+unsigned long _ledStatusTimeout = 0;
+bool _ledState = false;
+
 /**
 * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
 *
@@ -141,7 +136,8 @@ void setup()
 #endif
 
 	// Init Dino board. Set pins, start GSM.
-	KMPProDinoESP32.init(ProDino_ESP32_GSM_Ethernet);
+	KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
+	KMPProDinoESP32.SetStatusLed(blue);
 	// Start RS485 with baud 19200 and 8N1.
 	KMPProDinoESP32.RS485Begin(19200);
 
@@ -209,6 +205,8 @@ void setup()
 	Serial.println(Ethernet.localIP());
 	Serial.println("The example GSM, Ethernet, WiFi is started.");
 #endif
+
+	KMPProDinoESP32.OffStatusLed();
 }
 
 /**
@@ -219,6 +217,7 @@ void setup()
 */
 void loop(void)
 {
+	ShowStatus();
 	ProcessDHTSensors(false);
 	ProcessOptoInputs(false);
 
@@ -256,8 +255,8 @@ void loop(void)
 	Serial.println(">> Client connected.");
 #endif
 
-	//// If client connected switch On status led.
-	//KMPDinoESP32.OnStatusLed();
+	// If client connected switch On status led.
+	KMPProDinoESP32.SetStatusLed(yellow);
 
 	// Read client request.
 	ReadClientRequest(client);
@@ -266,13 +265,51 @@ void loop(void)
 	// Close the client connection.
 	client->stop();
 
-	//// If client disconnected switch Off status led.
-	//KMPDinoESP32.OffStatusLed();
+	// If client disconnected switch Off status led.
+	KMPProDinoESP32.OffStatusLed();
 
 #ifdef DEBUG
 	Serial.println(">> Client disconnected.");
 	Serial.println();
 #endif
+}
+
+void ShowStatus()
+{
+	if (millis() > _ledStatusTimeout)
+	{
+		_ledState = !_ledState;
+
+		if (_ledState)
+		{
+			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
+			KMPProDinoESP32.SetStatusLed(green);
+		}
+		else
+		{
+			KMPProDinoESP32.OffStatusLed();
+		}
+
+		// Set next time to read data.
+		_ledStatusTimeout = millis() + LED_STATUS_INTERVAL_MS;
+	}
+}
+
+/**
+ * @brief Set relay state.
+ * @param relay The relay which status will change.
+ * @param status A new status relay.
+ *
+ * @return void
+ */
+void SetRelay(uint8_t relayNumber, bool status, bool isBlynk = true)
+{
+	KMPProDinoESP32.SetRelayState(relayNumber, status);
+
+	if (!isBlynk)
+	{
+		Blynk.virtualWrite(relayNumber + 1, status);
+	}
 }
 
 bool ReadClientRequest(Stream *client)
@@ -319,7 +356,7 @@ bool ReadClientRequest(Stream *client)
 		uint8_t relay = CharToInt(lastRow[1]) - 1;
 		bool newState = lastRow.endsWith(W_ON);
 
-		KMPProDinoESP32.SetRelayState(relay, newState);
+		SetRelay(relay, newState, false);
 	}
 
 	// RS485
@@ -424,16 +461,6 @@ void ProcessOptoInputs(bool force)
 			optoInput->Status = currentStatus;
 		}
 	}
-}
-
-/**
- * @brief Set relay state.
- *
- * @return void
- */
-void SetRelay(Relay relay, int status)
-{
-	KMPProDinoESP32.SetRelayState(relay, status == 1);
 }
 
 /*****************************

@@ -3,7 +3,9 @@
 // Web: https://kmpelectronics.eu/
 // Supported boards:
 //		- KMP ProDino ESP32 Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/)
-//		- KMP ProDino ESP32 GSM Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
+//		- KMP ProDino ESP32 Ethernet GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-GSM-v1/)
+//		- KMP ProDino ESP32 Ethernet LoRa V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/)
+//		- KMP ProDino ESP32 Ethernet LoRa RFM V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/)
 // Description:
 //		Relays manipulation web example.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-esp32-versions-examples/
@@ -38,6 +40,10 @@ EthernetServer _server(LOCAL_PORT);
 // Client.
 EthernetClient _client;
 
+const long LED_STATUS_INTERVAL_MS = 1000;
+unsigned long _ledStatusTimeout = 0;
+bool _ledState = false;
+
 /**
 * @brief Setup void. It is Arduino executed first. Initialize DiNo board.
 *
@@ -53,6 +59,10 @@ void setup()
 
 	// Init Dino board. Set pins, start W5500.
 	KMPProDinoESP32.init(ProDino_ESP32_Ethernet);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_LoRa);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_LoRa_RFM);
+	KMPProDinoESP32.SetStatusLed(blue);
 
 	// Start the Ethernet connection and the server.
 	//Ethernet.begin(_mac, _ip);
@@ -70,6 +80,8 @@ void setup()
 	Serial.println(Ethernet.gatewayIP());
 	Serial.println(Ethernet.subnetMask());
 #endif
+
+	KMPProDinoESP32.OffStatusLed();
 }
 
 /**
@@ -80,6 +92,7 @@ void setup()
 */
 void loop() 
 {
+	ShowStatus();
 	// Waiting for a client.
 	_client = _server.available();
 
@@ -92,8 +105,8 @@ void loop()
 	Serial.println(">> Client connected.");
 #endif
 
-	//// If client connected switch On status led.
-	//KMPDinoESP32.OnStatusLed();
+	// If client connected switch On status led.
+	KMPProDinoESP32.SetStatusLed(yellow);
 
 	// Read client request.
 	ReadClientRequest();
@@ -102,13 +115,34 @@ void loop()
 	// Close the client connection.
 	_client.stop();
 
-	//// If client disconnected switch Off status led.
-	//KMPDinoESP32.OffStatusLed();
+	// If client disconnected switch Off status led.
+	KMPProDinoESP32.OffStatusLed();
 
 #ifdef DEBUG
 	Serial.println(">> Client disconnected.");
 	Serial.println();
 #endif
+}
+
+void ShowStatus()
+{
+	if (millis() > _ledStatusTimeout)
+	{
+		_ledState = !_ledState;
+
+		if (_ledState)
+		{
+			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
+			KMPProDinoESP32.SetStatusLed(green);
+		}
+		else
+		{
+			KMPProDinoESP32.OffStatusLed();
+		}
+
+		// Set next time to read data.
+		_ledStatusTimeout = millis() + LED_STATUS_INTERVAL_MS;
+	}
 }
 
 /**

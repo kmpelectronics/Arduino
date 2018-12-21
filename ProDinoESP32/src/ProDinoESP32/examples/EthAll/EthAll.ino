@@ -2,14 +2,24 @@
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		- KMP ProDino ESP32 Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/)
-//		- KMP ProDino ESP32 GSM Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
+//		KMP ProDino ESP32 Ethernet V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/)
+//		KMP ProDino ESP32 Ethernet GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
+//		KMP ProDino ESP32 Ethernet LoRa V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
+//		KMP ProDino ESP32 Ethernet LoRa RFM V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-ethernet-v1/)
 // Description:
 //		Test all through Ethernet: Relays, inputs, RS485, GROVE connector.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-esp32-versions-examples/
 // Version: 1.0.0
 // Date: 17.10.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
+// --------------------------------------------------------------------------------
+// Prerequisites:
+//	Before start this example you need to install:
+//		Install Blynk library: Sketch\Include library\Menage Libraries... find ... and click Install.
+//         - SimpleDHT by Winlin
+//		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
+//			- sensor 1 GROVE_D0, Vcc+, Gnd(-);
+//			- sensor 2 GROVE_D1, Vcc+, Gnd(-); - it is not mandatory.
 
 #include "KMPProDinoESP32.h"
 #include "KMPCommon.h"
@@ -68,7 +78,11 @@ const char GRAY[] = "#808080";
 // Check sensor data, interval in milliseconds.
 const long CHECK_HT_INTERVAL_MS = 5000;
 // Store last measure time.
-unsigned long _mesureTimeout;
+unsigned long _mesureTimeout = 0;
+
+const long LED_STATUS_INTERVAL_MS = 1000;
+unsigned long _ledStatusTimeout = 0;
+bool _ledState = false;
 
 /**
 * @brief Setup void. It is Arduino executed first. Initialize DiNo board.
@@ -85,6 +99,10 @@ void setup()
 
 	// Init Dino board. Set pins, start W5500.
 	KMPProDinoESP32.init(ProDino_ESP32_Ethernet);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_LoRa);
+	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_LoRa_RFM);
+	KMPProDinoESP32.SetStatusLed(blue);
 	// Start RS485 with baud 19200 and 8N1.
 	KMPProDinoESP32.RS485Begin(19200);
 
@@ -105,7 +123,7 @@ void setup()
 	Serial.println(Ethernet.subnetMask());
 #endif
 
-	_mesureTimeout = 0;
+	KMPProDinoESP32.OffStatusLed();
 }
 
 /**
@@ -116,6 +134,7 @@ void setup()
 */
 void loop()
 {
+	ShowStatus();
 	GetDataFromSensors();
 
 	// Waiting for a client.
@@ -130,8 +149,8 @@ void loop()
 	Serial.println(">> Client connected.");
 #endif
 
-	//// If client connected switch On status led.
-	//KMPDinoESP32.OnStatusLed();
+	// If client connected switch On status led.
+	KMPProDinoESP32.SetStatusLed(yellow);
 
 	// Read client request.
 	ReadClientRequest();
@@ -140,8 +159,8 @@ void loop()
 	// Close the client connection.
 	_client.stop();
 
-	//// If client disconnected switch Off status led.
-	//KMPDinoESP32.OffStatusLed();
+	// If client disconnected switch Off status led.
+	KMPProDinoESP32.OffStatusLed();
 
 #ifdef DEBUG
 	Serial.println(">> Client disconnected.");
@@ -149,6 +168,26 @@ void loop()
 #endif
 }
 
+void ShowStatus()
+{
+	if (millis() > _ledStatusTimeout)
+	{
+		_ledState = !_ledState;
+
+		if (_ledState)
+		{
+			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
+			KMPProDinoESP32.SetStatusLed(green);
+		}
+		else
+		{
+			KMPProDinoESP32.OffStatusLed();
+		}
+
+		// Set next time to read data.
+		_ledStatusTimeout = millis() + LED_STATUS_INTERVAL_MS;
+	}
+}
 
 /**
 * @brief ReadClientRequest void. Read and parse client request.
