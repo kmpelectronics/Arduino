@@ -1,18 +1,16 @@
 // KMPCommon.h
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
-// License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
+// Web: https://kmpelectronics.eu/
 // Description:
-//		Common library.
-// Version: 1.0.0
-// Date: 09.01.2015
+//		This library contains common methods helping us develop examples.
+// Version: 1.3.0
+// Date: 27.09.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #ifndef _KMPCOMMON_h
 #define _KMPCOMMON_h
 
 #include "Arduino.h"
-
 #include "IPAddress.h"
 
 #ifndef UINT8_MAX
@@ -49,6 +47,14 @@ const char CH_E = 'E';
 const char CH_EQUAL = '=';
 const char W_ON[] = "On";
 const char W_OFF[] = "Off";
+const char W_ON_S[] = "on";
+const char W_OFF_S[] = "off";
+const char W_OK[] = "OK";
+const char W_GET[] = "GET";
+const char W_POST[] = "POST";
+const char KMP_ELECTRONICS_LTD[] = "KMP Electronics Ltd.";
+const char URL_KMPELECTRONICS_EU[] = "https://kmpelectronics.eu/";
+const char HEADER_200_TEXT_HTML[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 
 struct TimeSpan
 {
@@ -101,12 +107,12 @@ bool atoip(char *data, uint8_t* result);
  *                  - true - convert OK;
  *                  - false - error converting.
  */
-bool atoUint8(char *data, uint8_t& result);
+bool atoUint8(char *data, uint8_t* result);
 
 /**
- * \brief Check if "text" start with "findTxt".
+ * \brief Check if "text" start with prefix.
  * 
- * \param text In which will search "findTxt".
+ * \param text In which will search.
  * \param findTxt Text to find.
  * \param caseSensitive Check case sensitive if true or case insensitive chars. Default false.
  * 
@@ -114,7 +120,34 @@ bool atoUint8(char *data, uint8_t& result);
  *                  - true - "text" start with "findTxt";
  *                  - false - "text" not start with "findTxt".
  */
-bool startsWith(const char* text, const char* findTxt, bool caseSensitive = false);
+bool startsWith(const char* str, const char* prefix/*, bool caseSensitive = false*/);
+bool startsWith(const char* str, size_t startPos, const char* prefix);
+
+bool endsWith(const char* str, const char* suffix);
+
+bool startAndEndWith(const char* str, const char* prefix, const char* suffix);
+
+void removeStart(char *str, size_t n);
+
+void removeEnd(char *str, size_t n);
+
+bool isEqual(const char *strFirst, const char *strSecond);
+
+bool isEqual(const char *strFirst, const char *strSecond, size_t length);
+
+float roundF(float f, uint8_t precision);
+
+#define CHECK_ENUM(var,enm) ((var & enm) != 0)
+
+/**
+* @brief Concatenate parameters in buffer.
+* @param buffer A buffer in which concatenates string parameter.
+* @param num Numbers of parameters.
+* @param ... parameters separated with comma. The values should be of type char*. Example: "house", "/", "bedroom"
+*
+* @return void
+*/
+void strConcatenate(char* buffer, int num, ...);
 
 /**
  * \brief Convert ip address (array of bytes) to string.
@@ -210,6 +243,8 @@ void ByteToHex(uint8_t b, char * result);
  */
 void ByteToHexStr(uint8_t b, char * result);
 
+void BytesToHexStr(const uint8_t* b, const int len,  char * result);
+
 /**
  * \brief Convert low bits from byte (0 - 16) to Hex char (0 - F).
  * 
@@ -274,5 +309,27 @@ void strReplace(char * str, uint8_t strLen, char oldChar, char newChar);
  * \return void
  */
 void MillisToTime(unsigned long millis, TimeSpan & time);
+
+/**
+* @brief Reading line from Ethernet stream. Reading all characters to CR/LF, LF/CR
+*
+* @param client Ethernet client instance.
+* @param line Result line without CR and LF.
+*
+* @return bool
+*   false - going to the end or client is null.
+*   true - in Ethernet stream found data to read, the line is empty (on the line has only CR and LF).
+* @note This method is easy to use (for examples) but it is slow because uses String for a char buffer.
+*/
+bool ReadHttpRequestLine(Stream* client, String* line);
+
+/**
+* @brief Get a value per certain key from WEB POST request data.
+*
+* @param data It is data should certain key and value. Example: data=test&btn=Transmit
+*
+* @return value for a key. If key is not found return empty string.
+*/
+String GetValue(const String &data, const String &key);
 
 #endif
