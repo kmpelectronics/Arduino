@@ -38,7 +38,7 @@
 #define DEBUG
 //#define BLYNK_DEBUG
 //#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
-#include <BlynkSimpleEthernet2.h>
+#include <BlynkSimpleEthernet.h>
 
 // You have to get your Authentication Token through Blynk Application.
 char AUTH_TOKEN[] = "123456789012345678901234567890123";

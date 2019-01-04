@@ -12,7 +12,7 @@
 
 #include "Arduino.h"
 #include "IPAddress.h"
-#include <Ethernet2.h>
+#include <Ethernet.h>
 
 #ifndef UINT8_MAX
 #define UINT8_MAX (~(uint8_t)0)

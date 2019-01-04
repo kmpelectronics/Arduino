@@ -16,7 +16,7 @@
 #define _KMPPRODINOMKRZERO_H
 
 #include <Arduino.h>
-#include <Ethernet2.h>
+#include <Ethernet.h>
 #include <HardwareSerial.h>
 
 // Inputs and outputs count.
