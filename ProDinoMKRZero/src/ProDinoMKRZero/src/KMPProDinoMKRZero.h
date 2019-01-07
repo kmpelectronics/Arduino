@@ -8,8 +8,9 @@
 //		- KMP ProDino MKR GSM Ethernet V1  https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/
 // Description:
 //		Library for supported board. It contains base methods to work with boards.
-// Version: 1.1.0
-// Date: 27.09.2018
+// Version: 1.1.1
+//   Last change: We have merged PR form Oskar Viljasaar https://github.com/tshikaboom to change Ethernet2.h with new Arduino Ethernet.h library. Thank you Oskar.
+// Date: 07.01.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
 #ifndef _KMPPRODINOMKRZERO_H

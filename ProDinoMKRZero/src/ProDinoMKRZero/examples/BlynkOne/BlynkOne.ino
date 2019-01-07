@@ -7,8 +7,9 @@
 // Description:
 //		Blynk example. For this example need add in Blynk mobile application 4 button, 4 LEDs and 2 value display.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-mkr-versions-examples/
-// Version: 1.0.0
-// Date: 25.04.2018
+// Version: 1.0.1
+//   Last change: We have merged PR form Oskar Viljasaar https://github.com/tshikaboom to change BlynkSimpleEthernet2.h with new Arduino BlynkSimpleEthernet.h library. Thank you Oskar.
+// Date: 07.01.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 // --------------------------------------------------------------------------------
