@@ -12,7 +12,7 @@
 //		KMP ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
 // Description:
 //		Source file for KMP Dino WiFi ESP32 board.
-// Version: 0.5.0
+// Version: 0.6.5
 // Date: 20.12.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
@@ -26,7 +26,7 @@ struct BoardConfig_t {
 	bool LoRaRFM;
 };
 
-const BoardConfig_t BoardConfig[8] = {
+const BoardConfig_t BoardConfig[BOARDS_COUNT] = {
 	{ProDino_ESP32, false, false, false, false},
 	{ProDino_ESP32_Ethernet, true, false, false, false},
 	{ProDino_ESP32_GSM, false, true, false, false},
@@ -118,7 +118,7 @@ void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startM
 	_board = board;
 
 	bool isBoardInitialized = false;
-	for (size_t i = 1; i < BOARDS_COUNT; i++)
+	for (size_t i = 0; i < BOARDS_COUNT; i++)
 	{
 		BoardConfig_t boardConfig = BoardConfig[i];
 		if (board == boardConfig.Board)

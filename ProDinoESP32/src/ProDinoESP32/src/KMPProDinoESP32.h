@@ -12,7 +12,7 @@
 //		KMP ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
 // Description:
 //		Header for KMP ProDino ESP32 boards.
-// Version: 0.5.0
+// Version: 0.6.5
 // Date: 20.12.2018
 // Authors: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
 
@@ -20,10 +20,10 @@
 #define _KMPPRODINOESP32_H
 
 #include <Arduino.h>
-#include <Ethernet2.h>
 #include <HardwareSerial.h>
 #include "MCP23S08.h"
-#include "NeoPixelBus.h"
+#include "Ethernet2/Ethernet2.h"
+#include "NeoPixel/NeoPixelBus.h"
 
 // Relays count
 #define RELAY_COUNT  4
