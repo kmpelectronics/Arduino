@@ -1,20 +1,17 @@
 // WebRelay.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards:
-//		KMP DiNo II NETBOARD V1.0. Web: http://kmpelectronics.eu/en-us/products/dinoii.aspx
-//		ProDiNo NetBoard V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
+//		- KMP ProDiNo Ethernet V2 https://kmpelectronics.eu/products/prodino-ethernet-v2/
 // Description:
 //		Web server relay manipulation example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/webrelaycontrol.aspx
-// Version: 1.2.0
-// Date: 29.11.2015
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-ethernet-examples/
+// Version: 1.3
+// Date: 29.02.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // Description: Compatibilie Arduinio version >= 1.6.5
 
-#include <SPI.h>
-#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
 
@@ -35,7 +32,7 @@ const uint16_t LOCAL_PORT = 80;
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
 
-char _kmpURL[] = "http://kmpelectronics.eu/";
+char _kmpURL[] = "https://kmpelectronics.eu/";
 
 // Initialize the Ethernet server library.
 // with the IP address and port you want to use.

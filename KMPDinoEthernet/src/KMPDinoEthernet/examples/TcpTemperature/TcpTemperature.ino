@@ -1,20 +1,17 @@
 // TcpTemperature.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards:
-//		KMP DiNo II NETBOARD V1.0. Web: http://kmpelectronics.eu/en-us/products/dinoii.aspx
-//		ProDiNo NetBoard V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
+//		- KMP ProDiNo Ethernet V2 https://kmpelectronics.eu/products/prodino-ethernet-v2/
 // Description:
 //		Tcp server read temperature example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/tcpoptoinputscheck.aspx
-// Version: 1.2.0
-// Date: 28.01.2018
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-ethernet-examples/
+// Version: 1.3
+// Date: 29.02.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // Description: Compatibility Arduino version >= 1.6.5
 
-#include <SPI.h>
-#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
 

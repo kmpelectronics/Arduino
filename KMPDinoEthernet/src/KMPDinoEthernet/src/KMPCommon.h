@@ -44,6 +44,7 @@ const char CH_A = 'A';
 const char CH_R = 'R';
 const char CH_I = 'I';
 const char CH_E = 'E';
+const char CH_T = 'T';
 const char CH_EQUAL = '=';
 const char W_ON[] = "On";
 const char W_OFF[] = "Off";

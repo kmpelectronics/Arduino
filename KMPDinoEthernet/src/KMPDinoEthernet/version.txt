@@ -1,8 +1,9 @@
 KMPDinoEthernet library
-Version: 1.4.3
+Version: 1.5
 Warning! RS485 don't work Arduino version from 1.5.6 to 1.6.4. Please use the version: >=1.6.5.
 
 History:
+Version: 1.5 - 20190227 Add Ethernet linbrary internaly in KMPDinoEthernet library. Fixing links in examples.
 Version: 1.4.3 - 20160822 For a project "ProDino Internet Relay" fix debug.
 Version: 1.4.2 - 20160819 For a project "ProDino Internet Relay" fix support new version KMPDinoEthernet library.
 Version: 1.4.1 - Fixed WebPing example debug mode.

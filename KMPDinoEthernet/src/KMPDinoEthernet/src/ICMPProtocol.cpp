@@ -9,7 +9,7 @@
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include "ICMPProtocol.h"
-#include "utility/util.h"
+#include "Ethernet/utility/util.h"
 
 /**
 * @brief Convert two bytes in word in little endian Arduino format.

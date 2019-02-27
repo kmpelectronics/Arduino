@@ -2,13 +2,13 @@
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		- KMP ProDiNo Ethernet V2 (https://kmpelectronics.eu/products/prodino-ethernet-v2/)
+//		- KMP ProDiNo Ethernet V2 https://kmpelectronics.eu/products/prodino-ethernet-v2/
 // Description:
 //		In this example you can see how to work with MQTT server. Through it you can manage relays, gets data from inputs, temperature and humidity sensor.
 //      If you found full functionality you would see our example MqttBase.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-ethernet-examples/
-// Version: 1.0.0
-// Date: 2.1.2019
+// Version: 1.1
+// Date: 27.02.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 // --------------------------------------------------------------------------------
@@ -53,10 +53,14 @@ enum DataType {
 };
 
 // MQTT server settings. 
-const char* mqtt_server = "xxx.cloudmqtt.com"; // change it with yours data.
-const int mqtt_port = 12345; // change it with yours data.
-const char* mqtt_user = "xxxxx"; // change it with yours data.
-const char* mqtt_pass = "xxxxx"; // change it with yours data.
+//const char* MQTT_SERVER = "xxx.cloudmqtt.com"; // Change it with yours data.
+//const int MQTT_PORT = 12345; // Change it with yours data.
+//const char* MQTT_USER = "xxxxx"; // Change it with yours data.
+//const char* MQTT_PASS = "xxxxx"; // Change it with yours data.
+const char* MQTT_SERVER = "m21.cloudmqtt.com"; // Change it with yours data.
+const int MQTT_PORT = 13161; // Change it with yours data.
+const char* MQTT_USER = "lqnxfvdl"; // Change it with yours data.
+const char* MQTT_PASS = "wRvBhKRm55PD"; // Change it with yours data.
 const char* MQTT_CLIENT_ID = "ProDinoEthClient";
 
 const char* BASE_TOPIC = "kmp"; // Base topic for all devices in this network. It can use for broadcast devices

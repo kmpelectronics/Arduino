@@ -15,7 +15,7 @@
 #define	KMPDINOETHERNET_H_INCLUDED
 
 #include <Arduino.h>
-#include <Ethernet.h>
+#include "Ethernet/Ethernet.h"
 
 // Count of inputs and outputs.
 #define RELAY_COUNT  4

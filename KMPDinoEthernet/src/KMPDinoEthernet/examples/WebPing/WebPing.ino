@@ -1,20 +1,17 @@
 // WebPing.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards: 
-//		KMP DiNo II NETBOARD V1.0. Web: http://kmpelectronics.eu/en-us/products/dinoii.aspx
-//		KMP ProDiNo NETBOARD V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
+//		- KMP ProDiNo Ethernet V2 https://kmpelectronics.eu/products/prodino-ethernet-v2/
 // Description:
 //		Web server ping IP address example.
-// Example link: http://kmpelectronics.eu/en-us/examples/dinoii/webpingipaddress.aspx
-// Version: 1.2.0
-// Date: 29.11.2015
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-ethernet-examples/
+// Version: 1.3
+// Date: 29.02.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // Description: Compatible Arduino version >= 1.6.5
 
-#include <SPI.h>
-#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
 
@@ -311,8 +308,8 @@ void WriteClientResponse()
 
     _client.write("</table>");
     _client.write("<br><br><hr />");
-    _client.write("<h1><a href='http://kmpelectronics.eu/' target='_blank'>Visit KMPElectronics.eu!</a></h1>");
-    _client.write("<h3><a href='http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx' target='_blank'>Information about ProDiNo Ethernet board</a></h3>");
+    _client.write("<h1><a href='https://kmpelectronics.eu/' target='_blank'>Visit KMPElectronics.eu!</a></h1>");
+    _client.write("<h3><a href='https://kmpelectronics.eu/en-us/products/prodinoethernet.aspx' target='_blank'>Information about ProDiNo Ethernet board</a></h3>");
     _client.write("<hr />");
 
     _client.write("</div></body>");

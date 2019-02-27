@@ -25,7 +25,7 @@ typedef uint8_t SOCKET;
   //#define WIZ550io_WITH_MACADDRESS // Use assigned MAC address of WIZ550io
   #include <utility/w5500.h>
 #elif defined W5200_ETHERNET_SHIELD
-  #include <utility/w5200.h>
+  #include "w5200.h"
 #endif
 
 #if !defined(SPI_HAS_EXTENDED_CS_PIN_HANDLING)

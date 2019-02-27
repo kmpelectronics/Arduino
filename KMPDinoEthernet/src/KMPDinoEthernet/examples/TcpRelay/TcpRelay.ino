@@ -1,20 +1,17 @@
 // TcpRelay.ino
 // Company: KMP Electronics Ltd, Bulgaria.
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // License: See the GNU General Public License for more details at http://www.gnu.org/copyleft/gpl.html
 // Supported boards: 
-//		KMP DiNo II NETBOARD V1.0. Web: http://kmpelectronics.eu/en-us/products/dinoii.aspx
-//		ProDiNo NetBoard V2.1. Web: http://kmpelectronics.eu/en-us/products/prodinoethernet.aspx
+//		- KMP ProDiNo Ethernet V2 https://kmpelectronics.eu/products/prodino-ethernet-v2/
 // Description:
 //		Tcp server relay manipulation example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinoii/tcprelaycontrol.aspx
-// Version: 1.2.0
-// Date: 29.11.2015
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-ethernet-examples/
+// Version: 1.3
+// Date: 27.02.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // Description: Compatibilie Arduinio version >= 1.6.5
 
-#include <SPI.h>
-#include <Ethernet.h>
 #include "KmpDinoEthernet.h"
 #include "KMPCommon.h"
 
@@ -60,9 +57,9 @@ void setup()
 #ifdef DEBUG
     // Open serial communications and wait for port to open:
     Serial.begin(9600);
-    while (!Serial) {
-    	; // wait for serial port to connect. Needed for Leonardo only. If need debug setup() void.
-    }
+    //while (!Serial) {
+    //	; // wait for serial port to connect. Needed for Leonardo only. If need debug setup() void.
+    //}
 #endif
 
     // Init Dino board. Set pins, start W5200.
@@ -73,11 +70,9 @@ void setup()
     _server.begin();
 
 #ifdef DEBUG
-    Serial.println("The server is started.");
-    Serial.print(Ethernet.localIP());
-	Serial.print(':');
-	Serial.println(LOCAL_PORT);
-	Serial.println(Ethernet.gatewayIP());
+    Serial.println("The server is starting.");
+    Serial.println(Ethernet.localIP());
+    Serial.println(Ethernet.gatewayIP());
     Serial.println(Ethernet.subnetMask());
 #endif
 }
