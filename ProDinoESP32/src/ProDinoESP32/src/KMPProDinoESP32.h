@@ -22,7 +22,9 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include "MCP23S08.h"
-#include "Ethernet2/Ethernet2.h"
+// When the library is fixed to work with ESP32 we will change this reference.
+//#include <Ethernet.h>
+#include "Ethernet/Ethernet.h"
 #include "NeoPixel/NeoPixelBus.h"
 
 // Relays count
