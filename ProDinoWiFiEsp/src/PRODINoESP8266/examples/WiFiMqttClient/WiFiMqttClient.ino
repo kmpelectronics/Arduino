@@ -6,8 +6,8 @@
 // Description:
 //    Local Mosquitto MQTT server example. In this example we show how to connect KMP ProDino WiFi-ESP WROOM-02 with Mosquitto (https://mosquitto.org) server worked in local network.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebrelayserverap.aspx
-// Version: 1.0.0
-// Date: 04.06.2017
+// Version: 1.0.1
+// Date: 07.05.2019
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #include <KMPDinoWiFiESP.h>
@@ -106,11 +106,15 @@ void loop(void)
 	}
 	_mqttClient.loop();
 
-	// Get current Opto input and relay statuses.
+	sendStatuses(false);
+}
+
+void sendStatuses(bool force)
+{
 	for (byte i = 0; i < RELAY_COUNT; i++)
 	{
 		bool rState = KMPDinoWiFiESP.GetRelayState(i);
-		if (_lastRelayStatus[i] != rState)
+		if (_lastRelayStatus[i] != rState || force)
 		{
 			_lastRelayStatus[i] = rState;
 			buildPayload(_payload, CMD_REL, CMD_SEP, i, rState);
@@ -122,26 +126,16 @@ void loop(void)
 
 	for (byte i = 0; i < OPTOIN_COUNT; i++)
 	{
-		bool rState = KMPDinoWiFiESP.GetOptoInState(i);
-		if (_lastOptoInStatus[i] != rState)
+		bool inState = KMPDinoWiFiESP.GetOptoInState(i);
+		if (_lastOptoInStatus[i] != inState || force)
 		{
-			_lastOptoInStatus[i] = rState;
-			buildPayload(_payload, CMD_OPTOIN, CMD_SEP, i, rState);
+			_lastOptoInStatus[i] = inState;
+			buildPayload(_payload, CMD_OPTOIN, CMD_SEP, i, inState);
 			Serial.print("Publish message: ");
 			Serial.println(_payload);
 			_mqttClient.publish(TOPIC_SEND_INFO, (const char*)_payload);
 		}
 	}
-
-	//long now = millis();
-	//if (now - lastMsg > 2000) {
-	//  lastMsg = now;
-	//  ++value;
-	//  snprintf(msg, 75, "hello world #%ld", value);
-	//  Serial.print("Publish message: ");
-	//  Serial.println(msg);
-	//  _mqttClient.publish("outTopic", msg);
-	//}
 }
 
 void buildPayload(char* buffer, const char* command, char separator, byte number, bool state)
@@ -162,10 +156,10 @@ void reconnect() {
 		// Attempt to connect
 		if (_mqttClient.connect("ESP8266Client")) {
 			Serial.println("connected");
-			// Once connected, publish an announcement...
-			//client.publish("outTopic", "hello world");
-			// ... and resubscribe
+
 			_mqttClient.subscribe(TOPIC_COMMAND);
+
+			sendStatuses(true);
 		}
 		else {
 			Serial.print("failed, rc=");
