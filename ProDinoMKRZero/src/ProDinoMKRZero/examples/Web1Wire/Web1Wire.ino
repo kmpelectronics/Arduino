@@ -85,6 +85,9 @@ void setup(void)
 	// Init Dino board. Set pins, start W5500.
 	KMPProDinoMKRZero.init(ProDino_MKR_Zero_Ethernet);
 
+	// Fix a problem with 1Wire initialization sensor. Thanks David, david.durstberger@gmail.com
+	pinMode(SENSORS_PIN, INPUT);
+
 	// Start the Ethernet connection and the server.
 	Ethernet.begin(_mac, _ip);
 	_server.begin();
