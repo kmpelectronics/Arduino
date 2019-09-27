@@ -66,18 +66,6 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 	return 0;
 }
 
-#ifdef ESP32
-int EthernetClient::connect(const char * host, uint16_t port, int timeout)
-{
-	return connect(host, port);
-}
-
-int EthernetClient::connect(IPAddress ip, uint16_t port, int timeout)
-{
-	return connect(ip, port);
-}
-#endif
-
 int EthernetClient::availableForWrite(void)
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;

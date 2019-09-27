@@ -22,9 +22,7 @@
 
 uint16_t EthernetServer::server_port[MAX_SOCK_NUM];
 
-
-// 20190421 https://kmpelectronics.eu/ Plamen Kovandjiev - We added support for ESP32.
-void EthernetServer::init()
+void EthernetServer::initSocket()
 {
 	uint8_t sockindex = Ethernet.socketBegin(SnMR::TCP, _port);
 	if (sockindex < MAX_SOCK_NUM) {
@@ -36,7 +34,6 @@ void EthernetServer::init()
 	}
 }
 
-// 20190421 https://kmpelectronics.eu/ Plamen Kovandjiev - We added support for ESP32.
 #ifdef ESP32
 void EthernetServer::begin(uint16_t port)
 {
@@ -44,12 +41,12 @@ void EthernetServer::begin(uint16_t port)
 		_port = port;
 	}
 
-	init();
+	initSocket();
 }
 #else
 void EthernetServer::begin()
 {
-	init();
+	initSocket();
 }
 #endif
 
