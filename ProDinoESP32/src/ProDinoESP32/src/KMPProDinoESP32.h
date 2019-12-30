@@ -96,7 +96,7 @@ enum BoardType {
 
 const char TEXT_HTML[] = "text/html; charset=utf-8";
 const char PRODINO_ESP32[] = "ProDino ESP32";
-const char URL_KMPELECTRONICS_EU_PRODINO_ESP32[] = "https://kmpelectronics.eu/products/prodino-esp32/";
+const char URL_KMPELECTRONICS_EU_PRODINO_ESP32[] = "https://kmpelectronics.eu/products/prodino-esp32-v1/";
 
 extern RgbColor yellow;
 extern RgbColor orange;
