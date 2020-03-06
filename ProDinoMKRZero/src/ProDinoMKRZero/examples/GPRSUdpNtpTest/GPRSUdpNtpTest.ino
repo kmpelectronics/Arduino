@@ -2,7 +2,8 @@
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		All KMP ProDino MKR Zero series (https://kmpelectronics.eu/product-category/arduino-mkr-zero/)
+//		ProDino MKR GSM V1 (https://kmpelectronics.eu/products/prodino-mkr-gsm-v1/)
+//		ProDino MKR GSM Ethernet V1 (https://kmpelectronics.eu/products/prodino-mkr-gsm-ethernet-v1/)
 // Description:
 //		With this example we can test GSM GPRS communication. 
 //		When the GSM/GPRS received valid NTP packet the status led changes it status.
@@ -48,15 +49,18 @@ bool _resetGsm = false;
 unsigned long _testNo = 0;
 unsigned long _noReceive = 0;
 unsigned long _responseTimeout;
+unsigned long _restartGsmCount = 0;
+unsigned long _restartGprsCount = 0;
 
 void setup()
 {
 	delay(5000);
 
 	Serial.begin(115200);
-	Serial.println("Starting GPRSUdpNtpClient example...");
+	Serial.println("Starting GPRSUdpNtpTest example...");
 
 	KMPProDinoMKRZero.init(ProDino_MKR_GSM);
+	//KMPProDinoMKRZero.init(ProDino_MKR_GSM_Ethernet);
 
 	// Enable GSM modem debug
 	MODEM.debug();
@@ -72,11 +76,13 @@ void loop()
 	// Waiting 10 sec. before asking for the time again
 	delay(10000);
 
-	sendNTPpacket(timeServer); // send an NTP packet to a time server
+	// Sending an NTP packet to a time server
+	sendNTPpacket(timeServer); 
 	
+	// Set waiting for packet time out
 	_responseTimeout = millis() + 1500;
 
-	// Waiting for a time packet
+	// Waiting for a time packet. It test for new packet every 100 ms with 1.5 sec timeout.
 	while (true)
 	{
 		if (Udp.parsePacket())
@@ -84,11 +90,14 @@ void loop()
 			break;
 		}
 
-		// If timeout appears print message
+		// If timeout appears print a message
 		if (millis() > _responseTimeout)
 		{
 			Serial.print(++_noReceive);
 			Serial.println(" packet not received! Trying again...");
+
+			printResets();
+
 			_ledStatus = false;
 			KMPProDinoMKRZero.OffStatusLed();
 
@@ -118,7 +127,7 @@ void loop()
 	Udp.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
 
 	//the timestamp starts at byte 40 of the received packet and is four bytes,
-	// or two words, long. First, esxtract the two words:
+	// or two words, long. First, extract the two words:
 
 	unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
 	unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
@@ -152,20 +161,34 @@ void loop()
 		Serial.print('0');
 	}
 	Serial.println(epoch % 60); // print the second
+
+	printResets();
+}
+
+void printResets()
+{
+	Serial.print("Restarts: GSM: ");
+	Serial.print(_restartGsmCount);
+	Serial.print(", GPRS: ");
+	Serial.println(_restartGprsCount);
 }
 
 bool isConnected()
 {
 	if (gsmAccess.status() != GSM_READY || _resetGsm)
 	{
+		_resetGsm = true;
 		Serial.println("Starting GSM...");
+
 		if (gsmAccess.begin(PINNUMBER) != GSM_READY)
 		{
 			Serial.println("GSM can not start!");
 			delay(1000);
 			return false;
 		}
+
 		Serial.println("GSM is started");
+		++_restartGsmCount;
 	}
 
 	if (gprs.status() != GPRS_READY || _resetGsm)
@@ -186,6 +209,7 @@ bool isConnected()
 		Udp.begin(localPort);
 
 		_resetGsm = false;
+		++_restartGprsCount;
 	}
 
 	return true;
