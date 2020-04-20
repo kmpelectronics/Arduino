@@ -1,0 +1,39 @@
+// KMPRS485Serial.h
+// Company: KMP Electronics Ltd, Bulgaria
+// Web: https://kmpelectronics.eu/
+// Supported boards: 
+//		ProDino ESP32 V1 https://kmpelectronics.eu/products/prodino-esp32-v1/
+//		ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
+//		ProDino ESP32 GSM V1 https://kmpelectronics.eu/products/prodino-esp32-gsm-v1/
+//		ProDino ESP32 LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-lora-v1/
+//		ProDino ESP32 LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-lora-rfm-v1/
+//		ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
+//		ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
+//		ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
+// Description:
+//		Header for KMP RS485 Serial.
+// Version: 1.0.0
+// Date: 11.03.2020
+// Authors: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu> & Dimitar Antonov <d.antonov@kmpelectronics.eu>
+
+#ifndef _KMPRS485SERIAL_H
+#define _KMPRS485SERIAL_H
+
+#include <Arduino.h>
+#include <HardwareSerial.h>
+
+class KMPRS485SerialClass : public HardwareSerial
+{
+ public:
+	 void begin(uint8_t rs485Pin, unsigned long baud, int8_t rxPin, int8_t txPin, uint32_t config = SERIAL_8N1, bool invert = false, unsigned long timeout_ms = 20000UL);
+
+	 size_t write(uint8_t n);
+	 size_t write(const uint8_t *buffer, size_t size);
+ private:
+	 void rs485BeginWrite();
+	 void rs485EndWrite();
+};
+
+extern KMPRS485SerialClass KMPRS485Serial;
+
+#endif

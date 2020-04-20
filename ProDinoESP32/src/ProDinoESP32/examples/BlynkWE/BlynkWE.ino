@@ -1,14 +1,20 @@
-// BlynkGSMTiny.ino
+// BlynkWE.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		- KMP ProDino ESP32 GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-GSM-v1/)
-//		- KMP ProDino ESP32 Ethernet GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-GSM-v1/)
+//		ProDino ESP32 V1 https://kmpelectronics.eu/products/prodino-esp32-v1/
+//		ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
+//		ProDino ESP32 GSM V1 https://kmpelectronics.eu/products/prodino-esp32-gsm-v1/
+//		ProDino ESP32 LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-lora-v1/
+//		ProDino ESP32 LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-lora-rfm-v1/
+//		ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
+//		ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
+//		ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
 // Description:
-//		This Blynk example communicate through GSM module.
+//		This Blynk example communicate through WiFi or Ethernet.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-esp32-versions-examples/
 // Version: 1.0.0
-// Date: 17.10.2018
+// Date: 20.04.2020
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
@@ -20,7 +26,7 @@
 //		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
 //			- sensor GROVE_D0, Vcc+, Gnd(-);
 //		You have to fill fields in arduino_secrets.h file.
-//  ProDino MKR series -> Blynk pins map:
+//  ProDino ESP32 -> Blynk pins map:
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
 //		Relay3 -> V3 {Type: "Button", Name: "Relay 3", Color: "LightBlue", Output: "V3", Mode: "Switch" }
@@ -34,17 +40,28 @@
 
 #include "KMPProDinoESP32.h"
 #include "KMPCommon.h"
-#include <SimpleDHT.h>
 #include "arduino_secrets.h"
 
-#define DEBUG
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <SimpleDHT.h>
 
-#define TINY_GSM_MODEM_UBLOX
-#include <TinyGsmClient.h>
+// if this define uncommented example supports only boards with Ethernet
+#define ETH_TEST
+
+#ifdef ETH_TEST
+	#include "Ethernet/EthernetClient.h"
+	#include <../Blynk/src/Adapters/BlynkEthernet.h>
+	static EthernetClient _blynkEthernetClient;
+	static BlynkArduinoClient _blynkTransport(_blynkEthernetClient);
+	BlynkEthernet Blynk(_blynkTransport);
+	#include <BlynkWidgets.h>
+#else
+	#include <BlynkSimpleEsp32.h>
+#endif // ETH_TEST
 
 //#define BLYNK_DEBUG
 #define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
-#include <BlynkSimpleSIM800.h>
 
 // Define sensors structure.
 struct MeasureHT_t
@@ -64,7 +81,7 @@ struct MeasureHT_t
 // Sensors count. 
 #define SENSOR_COUNT 1
 
-// Define array of 2 sensors.
+// Define an array with 1 sensors.
 MeasureHT_t _measureHT[SENSOR_COUNT] =
 {
 	{ true, "Sensor 1", SimpleDHT22(GROVE_D0), NAN, NAN }
@@ -92,106 +109,63 @@ OptoIn_t _optoInputs[OPTOIN_COUNT] =
 	{ OptoIn4, WidgetLED(V8), false }
 };
 
-// It supports work with GSM Modem.
-TinyGsm modem(SerialModem);
-
-const long LED_STATUS_INTERVAL_MS = 1000;
-unsigned long _ledStatusTimeout = 0;
-bool _ledState = false;
-
 /**
 * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
-*
 *
 * @return void
 */
 void setup()
 {
 	delay(5000);
-#ifdef DEBUG
 	Serial.begin(115200);
-	Serial.println("The example BlynkGSMTiny is starting...");
-#endif
+	Serial.println("The example BlynkWE is starting...");
 
 	// Init Dino board. Set pins, start GSM.
-	KMPProDinoESP32.init(ProDino_ESP32_GSM);
-	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
-	KMPProDinoESP32.SetStatusLed(blue);
-
-#ifdef DEBUG
-	Serial.println("Initializing modem...");
+#ifndef ETH_TEST
+	KMPProDinoESP32.begin(ProDino_ESP32);
+	//KMPProDinoESP32.begin(ProDino_ESP32_GSM);
+	//KMPProDinoESP32.begin(ProDino_ESP32_LoRa);
+	//KMPProDinoESP32.begin(ProDino_ESP32_LoRa_RFM);
+#else
+	KMPProDinoESP32.begin(ProDino_ESP32_Ethernet);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_GSM);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_LoRa);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_LoRa_RFM);
 #endif
-	modem.init();
-
-	String modemInfo = modem.getModemInfo();
-	if (modemInfo == "")
-	{
-#ifdef DEBUG
-		Serial.println("Modem is not started!!!");
-#endif
-		while (true) {}
-	}
-#ifdef DEBUG
-	Serial.print("Modem info: ");
-	Serial.println(modemInfo);
-#endif
-
-	// Unlock your SIM card if it locked with a PIN code. 
-	// If PIN is not valid don't try more than 3 time because the SIM card locked and need unlock with a PUK code.
-	if (strlen(PINNUMBER) > 0 && !modem.simUnlock(PINNUMBER))
-	{
-#ifdef DEBUG
-		Serial.println("PIN code is not valid! STOP!!!");
-#endif
-		while (true) {}
-	}
+	KMPProDinoESP32.setStatusLed(blue);
 
 	_mesureTimeout = 0;
 
-#ifdef DEBUG
-	Serial.println("The example BlynkGSMTiny is started.");
+#ifdef ETH_TEST
+	Blynk.begin(AUTH_TOKEN);
+	// You can also specify server:
+	//Blynk.begin(AUTH_TOKEN, "blynk-cloud.com", 80);
+	//Blynk.begin(AUTH_TOKEN, IPAddress(192,168,1,100), 8080);
+#else
+	Blynk.begin(AUTH_TOKEN, SSID_NAME, SSID_PASSWORD);
+	// You can also specify server:
+	//Blynk.begin(AUTH_TOKEN, SSID_NAME, SSID_PASSWORD, "blynk-cloud.com", 80);
+	//Blynk.begin(AUTH_TOKEN, SSID_NAME, SSID_PASSWORD, IPAddress(192,168,1,100), 8080);
 #endif
 
-	Blynk.begin(AUTH_TOKEN, modem, GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD);
+	KMPProDinoESP32.offStatusLed();
 
-	KMPProDinoESP32.OffStatusLed();
+	Serial.println("The example BlynkWE is started.");
 }
 
 /**
 * @brief Loop void. Arduino executed second.
 *
-*
 * @return void
 */
 void loop(void)
 {
-	ShowStatus();
+	KMPProDinoESP32.processStatusLed(green, 1000);
 
 	ProcessDHTSensors(false);
 	ProcessOptoInputs(false);
 
 	Blynk.run();
-}
-
-void ShowStatus()
-{
-	if (millis() > _mesureTimeout)
-	{
-		_ledState = !_ledState;
-
-		if (_ledState)
-		{
-			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
-			KMPProDinoESP32.SetStatusLed(green);
-		}
-		else
-		{
-			KMPProDinoESP32.OffStatusLed();
-		}
-
-		// Set next time to read data.
-		_mesureTimeout = millis() + LED_STATUS_INTERVAL_MS;
-	}
 }
 
 /**
@@ -244,7 +218,7 @@ void ProcessOptoInputs(bool force)
 	for (int i = 0; i < OPTOIN_COUNT; i++)
 	{
 		OptoIn_t* optoInput = &_optoInputs[i];
-		bool currentStatus = KMPProDinoESP32.GetOptoInState(optoInput->Input);
+		bool currentStatus = KMPProDinoESP32.getOptoInState(optoInput->Input);
 		if (optoInput->Status != currentStatus || ((bool)optoInput->Widget.getValue()) != currentStatus || force)
 		{
 			Serial.println("Opto input " + String(i + 1) + " status changed to -> \"" + currentStatus + "\". WidgetLED value: " + optoInput->Widget.getValue());
@@ -262,7 +236,7 @@ void ProcessOptoInputs(bool force)
  */
 void SetRelay(Relay relay, int status)
 {
-	KMPProDinoESP32.SetRelayState(relay, status == 1);
+	KMPProDinoESP32.setRelayState(relay, status == 1);
 }
 
 /*****************************
@@ -295,7 +269,7 @@ BLYNK_WRITE(V1)
 */
 BLYNK_READ(V1)
 {
-	Blynk.virtualWrite(V1, KMPProDinoESP32.GetRelayState(Relay1));
+	Blynk.virtualWrite(V1, KMPProDinoESP32.getRelayState(Relay1));
 }
 
 /**

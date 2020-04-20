@@ -1,17 +1,20 @@
-// WiFiEthAll.ino
+// AllW.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
-//		KMP ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
-//		KMP ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
-//		KMP ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
+//		ProDino ESP32 V1 https://kmpelectronics.eu/products/prodino-esp32-v1/
+//		ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
+//		ProDino ESP32 GSM V1 https://kmpelectronics.eu/products/prodino-esp32-gsm-v1/
+//		ProDino ESP32 LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-lora-v1/
+//		ProDino ESP32 LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-lora-rfm-v1/
+//		ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
+//		ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
+//		ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
 // Description:
-//      Test all: WiFi, relays, inputs, RS485, GROVE connector.
-//      Test all through Ethernet: Relays, inputs, RS485, GROVE connector.
+//      This example test via WiFi: relays, inputs, RS485, GROVE connector.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-esp32-versions-examples/
 // Version: 1.0.0
-// Date: 21.12.2018
+// Date: 20.04.2020
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
@@ -26,8 +29,6 @@
 #include "KMPCommon.h"
 #include <SimpleDHT.h>
 #include "arduino_secrets.h"
-
-#define DEBUG
 
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -61,25 +62,14 @@ const long CHECK_HT_INTERVAL_MS = 10000;
 // Store last measure time.
 unsigned long _mesureTimeout = 0;
 
-
 // Define text colors.
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
 const char GRAY[] = "#808080";
 
-const uint8_t HTTP_PORT = 80;
+const uint8_t LOCAL_PORT = 80;
 // TCP server at port 80 will respond to HTTP requests
-WiFiServer _wifiServer(HTTP_PORT);
-
-// Enter a MAC address and IP address for your controller below.
-byte _mac[] = { 0x00, 0x08, 0xDC, 0xB0, 0xDA, 0x91 };
-// The IP address will be dependent on your local network.
-IPAddress _ip(192, 168, 1, 197);
-EthernetServer _ethServer(HTTP_PORT);
-
-const long LED_STATUS_INTERVAL_MS = 1000;
-unsigned long _ledStatusTimeout = 0;
-bool _ledState = false;
+WiFiServer _wifiServer(LOCAL_PORT);
 
 /**
 * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
@@ -90,26 +80,26 @@ bool _ledState = false;
 void setup()
 {
 	delay(5000);
-#ifdef DEBUG
 	Serial.begin(115200);
-	Serial.println("The example WiFi and Ethernet is starting...");
-#endif
+	Serial.println("The example WiFi test all is starting...");
 
 	// Init Dino board.
-	KMPProDinoESP32.init(ProDino_ESP32_Ethernet);
-	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
-	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_LoRa);
-	//KMPProDinoESP32.init(ProDino_ESP32_Ethernet_LoRa_RFM);
-	KMPProDinoESP32.SetStatusLed(blue);
-	
-	// Reset Relay status.
-	KMPProDinoESP32.SetAllRelaysOff();
+	KMPProDinoESP32.begin(ProDino_ESP32);
+	//KMPProDinoESP32.begin(ProDino_ESP32_GSM);
+	//KMPProDinoESP32.begin(ProDino_ESP32_LoRa);
+	//KMPProDinoESP32.begin(ProDino_ESP32_LoRa_RFM);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_GSM);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_LoRa);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_LoRa_RFM);
+
+	KMPProDinoESP32.setStatusLed(blue);
 
 	// Start RS485 with baud 19200 and 8N1.
-	KMPProDinoESP32.RS485Begin(19200);
+	KMPProDinoESP32.rs485Begin(19200);
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, SSID_PASSWORD);
+	WiFi.begin(SSID_NAME, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection
@@ -118,31 +108,15 @@ void setup()
 		Serial.print(".");
 	}
 
-#ifdef DEBUG
-	Serial.println("");
-	Serial.print("Connected to WiFi: ");
-	Serial.print(SSID);
-	Serial.print(" with IP address: ");
-	Serial.println(WiFi.localIP());
-#endif
+	Serial.println();
+	Serial.print("WiFi IP: ");
+	Serial.print(WiFi.localIP());
+	Serial.print(":");
+	Serial.println(LOCAL_PORT);
 
 	_wifiServer.begin();
 
-	// Start the Ethernet connection and the server.
-	if (Ethernet.begin(_mac) == 0) {
-		Serial.println("Failed to configure Ethernet using DHCP");
-		// no point in carrying on, so do nothing forevermore:
-		while (1);
-	}
-	_ethServer.begin();
-
-#ifdef DEBUG
-	Serial.print("Connected to Ethernet DHCP with IP address: ");
-	Serial.println(Ethernet.localIP());
-	Serial.println("The example WiFi and Ethernet is started.");
-#endif
-
-	KMPProDinoESP32.OffStatusLed();
+	KMPProDinoESP32.offStatusLed();
 }
 
 /**
@@ -153,7 +127,7 @@ void setup()
 */
 void loop(void)
 {
-	ShowStatus();
+	KMPProDinoESP32.processStatusLed(green, 1000);
 	ProcessDHTSensors();
 
 	String clientType;
@@ -173,25 +147,15 @@ void loop(void)
 		client = &wifiClient;
 	}
 
-	EthernetClient ethClient = _ethServer.available();
-	if (ethClient && ethClient.connected())
-	{
-		Serial.println("-- ethClient --");
-		clientType = "Ethernet client";
-		client = &ethClient;
-	}
-
 	if (client == NULL)
 	{
 		return;
 	}
 
-#ifdef DEBUG
 	Serial.println(">> Client connected.");
-#endif
 
 	// If client connected switch On status led.
-	KMPProDinoESP32.SetStatusLed(yellow);
+	KMPProDinoESP32.setStatusLed(yellow);
 
 	// Read client request.
 	ReadClientRequest(client);
@@ -201,40 +165,15 @@ void loop(void)
 	client->stop();
 
 	// If client disconnected switch Off status led.
-	KMPProDinoESP32.OffStatusLed();
+	KMPProDinoESP32.offStatusLed();
 
-#ifdef DEBUG
 	Serial.println(">> Client disconnected.");
 	Serial.println();
-#endif
-}
-
-void ShowStatus()
-{
-	if (millis() > _ledStatusTimeout)
-	{
-		_ledState = !_ledState;
-
-		if (_ledState)
-		{
-			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
-			KMPProDinoESP32.SetStatusLed(green);
-		}
-		else
-		{
-			KMPProDinoESP32.OffStatusLed();
-		}
-
-		// Set next time to read data.
-		_ledStatusTimeout = millis() + LED_STATUS_INTERVAL_MS;
-	}
 }
 
 bool ReadClientRequest(Stream *client)
 {
-#ifdef DEBUG
 	Serial.println(">> Starts client request.");
-#endif
 
 	// Loop while read all request.
 	// Read first and last row from request.
@@ -245,12 +184,10 @@ bool ReadClientRequest(Stream *client)
 		while (ReadHttpRequestLine(client, &lastRow));
 	}
 
-#ifdef DEBUG
 	Serial.println("--firstRow--");
 	Serial.println(firstRow);
 	Serial.println("--lastRow--");
 	Serial.println(lastRow);
-#endif
 
 	// If the request is GET we write only response.
 	if (GetRequestType(firstRow.c_str()) == GET)
@@ -261,9 +198,7 @@ bool ReadClientRequest(Stream *client)
 	// Invalid request type.
 	if (GetRequestType(firstRow.c_str()) != POST || lastRow.length() == 0)
 	{
-#ifdef DEBUG
 		Serial.println(">> Invalid request type.");
-#endif
 		return false;
 	}
 
@@ -274,7 +209,7 @@ bool ReadClientRequest(Stream *client)
 		uint8_t relayNumber = CharToInt(lastRow[1]) - 1;
 		bool newState = lastRow.endsWith(W_ON);
 
-		KMPProDinoESP32.SetRelayState(relayNumber, newState);
+		KMPProDinoESP32.setRelayState(relayNumber, newState);
 	}
 
 	// RS485
@@ -283,19 +218,14 @@ bool ReadClientRequest(Stream *client)
 		// From POST parameters we get data should be send.
 		String dataToSend = GetValue(lastRow, "data");
 
-#ifdef DEBUG
 		Serial.print("RS485 data to send: ");
 		Serial.println(dataToSend);
-#endif
 
 		// Transmit data.
-		KMPProDinoESP32.RS485Write(dataToSend);
+		KMPProDinoESP32.rs485Write(dataToSend);
 	}
 
-#ifdef DEBUG
 	Serial.println(">> End client request.");
-#endif
-
 	return true;
 }
 
@@ -367,7 +297,7 @@ String RelayTable()
 		char* cellColor;
 		char* cellStatus;
 		char* nextRelayStatus;
-		if (KMPProDinoESP32.GetRelayState(i))
+		if (KMPProDinoESP32.getRelayState(i))
 		{
 			cellColor = (char*)RED;
 			cellStatus = (char*)W_ON;
@@ -407,7 +337,7 @@ String InputTable()
 
 		char* cellColor;
 		char* cellStatus;
-		if (KMPProDinoESP32.GetOptoInState(i))
+		if (KMPProDinoESP32.getOptoInState(i))
 		{
 			cellColor = (char*)RED;
 			cellStatus = (char*)W_ON;
@@ -433,13 +363,11 @@ String RS485Table()
 	String receivedData = "";
 	int i;
 	// Reading data from the RS485 port.
-	while ((i = KMPProDinoESP32.RS485Read()) != -1)
+	while ((i = KMPProDinoESP32.rs485Read()) != -1)
 	{
 		// Adding received data in a buffer.
 		receivedData += (char)i;
-#ifdef DEBUG
 		Serial.write((char)i);
-#endif
 	}
 
 	return

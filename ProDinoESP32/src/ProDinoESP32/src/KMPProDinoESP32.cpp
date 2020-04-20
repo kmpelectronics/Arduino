@@ -108,12 +108,15 @@ BoardType _board;
 
 uint32_t _TxFlushDelayuS;
 
-void KMPProDinoESP32Class::init(BoardType board)
+unsigned long _blinkIntervalTimeout = 0;
+bool _ledState = false;
+
+void KMPProDinoESP32Class::begin(BoardType board)
 {
-	init(board, true, true);
+	begin(board, true, true);
 }
 
-void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startModem)
+void KMPProDinoESP32Class::begin(BoardType board, bool startEthernet, bool startModem)
 {
 	_board = board;
 
@@ -127,17 +130,17 @@ void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startM
 
 			if (boardConfig.Ethernet)
 			{
-				InitEthernet(startEthernet);
+				beginEthernet(startEthernet);
 			}
 
 			if (boardConfig.GSM)
 			{
-				InitGSM(startModem);
+				beginGSM(startModem);
 			}
 
 			if (boardConfig.LoRa)
 			{
-				InitLoRa(startModem);
+				beginLoRa(startModem);
 			}
 
 			break;
@@ -173,14 +176,14 @@ void KMPProDinoESP32Class::init(BoardType board, bool startEthernet, bool startM
 	digitalWrite(RS485Pin, RS485Receive);
 }
 
-void KMPProDinoESP32Class::InitEthernet(bool startEthernet)
+void KMPProDinoESP32Class::beginEthernet(bool startEthernet)
 {
 	// W5500 pin init.
 	pinMode(W5500ResetPin, OUTPUT);
 
 	if (startEthernet)
 	{
-		RestartEthernet();
+		restartEthernet();
 		Ethernet.init(W5500CSPin);
 	}
 	else
@@ -189,7 +192,7 @@ void KMPProDinoESP32Class::InitEthernet(bool startEthernet)
 	}
 }
 
-void KMPProDinoESP32Class::InitGSM(bool startGSM)
+void KMPProDinoESP32Class::beginGSM(bool startGSM)
 {
 	// Start serial communication with the GSM modem.
 	SerialModem.begin(115200, SERIAL_8N1, GSMRxPin, GSMTxPin);
@@ -198,11 +201,11 @@ void KMPProDinoESP32Class::InitGSM(bool startGSM)
 	pinMode(GSMResetPin, OUTPUT);
 	if (startGSM)
 	{
-		RestartGSM();
+		restartGSM();
 	}
 	else
 	{
-		ResetGSMOn();
+		resetGSMOn();
 	}
 
 	// The GSM pin is output.
@@ -213,7 +216,7 @@ void KMPProDinoESP32Class::InitGSM(bool startGSM)
 	digitalWrite(GSMRTSPin, LOW);
 }
 
-void KMPProDinoESP32Class::InitLoRa(bool startLora)
+void KMPProDinoESP32Class::beginLoRa(bool startLora)
 {
 	// Start serial communication with the GSM modem.
 	SerialModem.begin(19200, SERIAL_8N1, LoRaRxPin, LoRaTxPin);
@@ -222,11 +225,11 @@ void KMPProDinoESP32Class::InitLoRa(bool startLora)
 	pinMode(LoRaResetPin, OUTPUT);
 	if (startLora)
 	{
-		RestartLoRa();
+		restartLoRa();
 	}
 	else
 	{
-		ResetLoRaOn();
+		resetLoRaOn();
 	}
 
 	// LoRa low pin.
@@ -234,45 +237,45 @@ void KMPProDinoESP32Class::InitLoRa(bool startLora)
 	digitalWrite(LoRaLowPin, LOW);
 }
 
-void KMPProDinoESP32Class::RestartLoRa()
+void KMPProDinoESP32Class::restartLoRa()
 {
 	// Reset occurs when a low level is applied to the RESET_N pin, which is normally set high by an internal pull-up, for a valid time period min 10 mS.
-	ResetLoRaOn();
+	resetLoRaOn();
 	delay(200);
-	ResetLoRaOff();
+	resetLoRaOff();
 	delay(200);
 }
 
-void KMPProDinoESP32Class::ResetLoRaOn()
+void KMPProDinoESP32Class::resetLoRaOn()
 {
 	digitalWrite(LoRaResetPin, LOW);
 }
 
-void KMPProDinoESP32Class::ResetLoRaOff()
+void KMPProDinoESP32Class::resetLoRaOff()
 {
 	digitalWrite(LoRaResetPin, HIGH);
 }
 
-void KMPProDinoESP32Class::RestartGSM()
+void KMPProDinoESP32Class::restartGSM()
 {
 	// Reset occurs when a low level is applied to the RESET_N pin, which is normally set high by an internal pull-up, for a valid time period min 10 mS.
 	// In our device this pin is inverted.
-	ResetGSMOn();
+	resetGSMOn();
 	delay(20);
-	ResetGSMOff();
+	resetGSMOff();
 }
 
-void KMPProDinoESP32Class::ResetGSMOn()
+void KMPProDinoESP32Class::resetGSMOn()
 {
 	digitalWrite(GSMResetPin, HIGH);
 }
 
-void KMPProDinoESP32Class::ResetGSMOff()
+void KMPProDinoESP32Class::resetGSMOff()
 {
 	digitalWrite(GSMResetPin, LOW);
 }
 
-void KMPProDinoESP32Class::RestartEthernet()
+void KMPProDinoESP32Class::restartEthernet()
 {
 	// RSTn Pull-up Reset (Active low) RESET should be held low at least 500 us for W5500 reset.
 	digitalWrite(W5500ResetPin, LOW);
@@ -280,12 +283,12 @@ void KMPProDinoESP32Class::RestartEthernet()
 	digitalWrite(W5500ResetPin, HIGH);
 }
 
-RgbColor KMPProDinoESP32Class::GetStatusLed()
+RgbColor KMPProDinoESP32Class::getStatusLed()
 {
 	return _statusLed.GetPixelColor(StatusLedPixelNumber);
 }
 
-void KMPProDinoESP32Class::SetStatusLed(RgbColor color)
+void KMPProDinoESP32Class::setStatusLed(RgbColor color)
 {
 	_statusLed.SetPixelColor(StatusLedPixelNumber, color);
 	_statusLed.Show();
@@ -293,25 +296,46 @@ void KMPProDinoESP32Class::SetStatusLed(RgbColor color)
 
 //void KMPProDinoESP32Class::OnStatusLed()
 //{
-//	SetStatusLed(true);
+//	setStatusLed(true);
 //}
 
-void KMPProDinoESP32Class::OffStatusLed()
+void KMPProDinoESP32Class::offStatusLed()
 {
 	_statusLed.SetPixelColor(StatusLedPixelNumber, black);
 	_statusLed.Show();
 }
 
+void KMPProDinoESP32Class::processStatusLed(RgbColor color, int blinkInterval)
+{
+	if (millis() > _blinkIntervalTimeout)
+	{
+		_ledState = !_ledState;
+
+		if (_ledState)
+		{
+			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
+			setStatusLed(color);
+		}
+		else
+		{
+			offStatusLed();
+		}
+
+		// Set next time to read data.
+		_blinkIntervalTimeout = millis() + blinkInterval;
+	}
+}
+
 //void KMPProDinoESP32Class::NotStatusLed()
 //{
-//	SetStatusLed(!GetStatusLed());
+//	setStatusLed(!getStatusLed());
 //}
 
 /* ----------------------------------------------------------------------- */
 /* Relays methods. */
 /* ----------------------------------------------------------------------- */
 
-void KMPProDinoESP32Class::SetRelayState(uint8_t relayNumber, bool state)
+void KMPProDinoESP32Class::setRelayState(uint8_t relayNumber, bool state)
 {
 	// Check if relayNumber is out of range - return.
 	if (relayNumber > RELAY_COUNT - 1)
@@ -322,30 +346,30 @@ void KMPProDinoESP32Class::SetRelayState(uint8_t relayNumber, bool state)
 	MCP23S08.SetPinState(RELAY_PINS[relayNumber], state);
 }
 
-void KMPProDinoESP32Class::SetRelayState(Relay relay, bool state)
+void KMPProDinoESP32Class::setRelayState(Relay relay, bool state)
 {
-	SetRelayState((uint8_t)relay, state);
+	setRelayState((uint8_t)relay, state);
 }
 
-void KMPProDinoESP32Class::SetAllRelaysState(bool state)
+void KMPProDinoESP32Class::setAllRelaysState(bool state)
 {
 	for (uint8_t i = 0; i < RELAY_COUNT; i++)
 	{
-		SetRelayState(i, state);
+		setRelayState(i, state);
 	}
 }
 
-void KMPProDinoESP32Class::SetAllRelaysOn()
+void KMPProDinoESP32Class::setAllRelaysOn()
 {
-	SetAllRelaysState(true);
+	setAllRelaysState(true);
 }
 
-void KMPProDinoESP32Class::SetAllRelaysOff()
+void KMPProDinoESP32Class::setAllRelaysOff()
 {
-	SetAllRelaysState(false);
+	setAllRelaysState(false);
 }
 
-bool KMPProDinoESP32Class::GetRelayState(uint8_t relayNumber)
+bool KMPProDinoESP32Class::getRelayState(uint8_t relayNumber)
 {
 	// Check if relayNumber is out of range - return false.
 	if (relayNumber > RELAY_COUNT - 1)
@@ -356,15 +380,15 @@ bool KMPProDinoESP32Class::GetRelayState(uint8_t relayNumber)
 	return MCP23S08.GetPinState(RELAY_PINS[relayNumber]);
 }
 
-bool KMPProDinoESP32Class::GetRelayState(Relay relay)
+bool KMPProDinoESP32Class::getRelayState(Relay relay)
 {
-	return GetRelayState((uint8_t)relay);
+	return getRelayState((uint8_t)relay);
 }
 
 /* ----------------------------------------------------------------------- */
 /* Opto input methods. */
 /* ----------------------------------------------------------------------- */
-bool KMPProDinoESP32Class::GetOptoInState(uint8_t optoInNumber)
+bool KMPProDinoESP32Class::getOptoInState(uint8_t optoInNumber)
 {
 	// Check if optoInNumber is out of range - return false.
 	if (optoInNumber > OPTOIN_COUNT - 1)
@@ -375,26 +399,26 @@ bool KMPProDinoESP32Class::GetOptoInState(uint8_t optoInNumber)
 	return !MCP23S08.GetPinState(OPTOIN_PINS[optoInNumber]);
 }
 
-bool KMPProDinoESP32Class::GetOptoInState(OptoIn optoIn)
+bool KMPProDinoESP32Class::getOptoInState(OptoIn optoIn)
 {
-	return GetOptoInState((uint8_t)optoIn);
+	return getOptoInState((uint8_t)optoIn);
 }
 
 /* ----------------------------------------------------------------------- */
 /* RS485 methods. */
 /* ----------------------------------------------------------------------- */
-void KMPProDinoESP32Class::RS485Begin(unsigned long baud)
+void KMPProDinoESP32Class::rs485Begin(unsigned long baud)
 {
-	RS485Begin(baud, SERIAL_8N1);
+	rs485Begin(baud, SERIAL_8N1);
 }
 
-void KMPProDinoESP32Class::RS485Begin(unsigned long baud, uint32_t config)
+void KMPProDinoESP32Class::rs485Begin(unsigned long baud, uint32_t config)
 {
 	RS485Serial.begin(baud, config, RS485RxPin, RS485TxPin);
 	_TxFlushDelayuS = (uint32_t)((1000000 / baud) * 15);
 }
 
-void KMPProDinoESP32Class::RS485End()
+void KMPProDinoESP32Class::rs485End()
 {
 	RS485Serial.end();
 }
@@ -423,7 +447,7 @@ void RS485EndWrite()
 	digitalWrite(RS485Pin, RS485Receive);
 }
 
-size_t KMPProDinoESP32Class::RS485Write(const uint8_t data)
+size_t KMPProDinoESP32Class::rs485Write(const uint8_t data)
 {
 	RS485BeginWrite();
 
@@ -434,7 +458,7 @@ size_t KMPProDinoESP32Class::RS485Write(const uint8_t data)
 	return result;
 }
 
-size_t KMPProDinoESP32Class::RS485Write(const uint8_t* data, size_t dataLen)
+size_t KMPProDinoESP32Class::rs485Write(const uint8_t* data, size_t dataLen)
 {
 	RS485BeginWrite();
 
@@ -445,12 +469,12 @@ size_t KMPProDinoESP32Class::RS485Write(const uint8_t* data, size_t dataLen)
 	return result;
 }
 
-int KMPProDinoESP32Class::RS485Read()
+int KMPProDinoESP32Class::rs485Read()
 {
-	return RS485Read(10, 10);
+	return rs485Read(10, 10);
 }
 
-int KMPProDinoESP32Class::RS485Read(unsigned long delayWait, uint8_t repeatTime)
+int KMPProDinoESP32Class::rs485Read(unsigned long delayWait, uint8_t repeatTime)
 {
 	// If the buffer is empty, wait until the data arrives.
 	while (!RS485Serial.available())

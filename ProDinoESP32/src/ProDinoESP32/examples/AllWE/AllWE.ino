@@ -1,51 +1,31 @@
-// GSMEthWiFiAll.ino
+// WiFiEthAll.ino
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards:
-//		- KMP ProDino ESP32 Ethernet GSM V1 (https://kmpelectronics.eu/products/prodino-esp32-ethernet-GSM-v1/)
+//		KMP ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
+//		KMP ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
+//		KMP ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
+//		KMP ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
 // Description:
-//		This Blynk example communicate through GSM module.
 //      Test all: WiFi, relays, inputs, RS485, GROVE connector.
 //      Test all through Ethernet: Relays, inputs, RS485, GROVE connector.
 // Example link: https://kmpelectronics.eu/tutorials-examples/prodino-esp32-versions-examples/
 // Version: 1.0.0
-// Date: 17.10.2018
+// Date: 21.12.2018
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
 //	Before start this example you need to install:
-//		Install Blynk library: Sketch\Include library\Menage Libraries... find ... and click Install.
-//         - Blynk
-//         - TinyGSM
+//		Installing library: Sketch\Include library\Menage Libraries... find ... and click Install.
 //         - SimpleDHT by Winlin
 //		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
 //			- sensor GROVE_D0, Vcc+, Gnd(-);
 //		You have to fill fields in arduino_secrets.h file.
-//  ProDino MKR series -> Blynk pins map:
-//		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
-//		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
-//		Relay3 -> V3 {Type: "Button", Name: "Relay 3", Color: "LightBlue", Output: "V3", Mode: "Switch" }
-//		Relay4 -> V4 {Type: "Button", Name: "Relay 4", Color: "Orange", Output: "V4", Mode: "Switch" }
-//		OptoIn1 -> V5 {Type: "LED", Name: "In 1", Color: "Green", Input: "V5" }
-//		OptoIn2 -> V6 {Type: "LED", Name: "In 2", Color: "Blue", Input: "V6" }
-//		OptoIn3 -> V7 {Type: "LED", Name: "In 3", Color: "LightBlue", Input: "V7" }
-//		OptoIn4 -> V8 {Type: "LED", Name: "In 4", Color: "Orange", Input: "V8" }
-//		DHT1T -> V9 {Type: "Value Display", Name: "Temperature", Color: "Green", Input: "V9", Min:"-40", Max:"80", ReadingFrecuency: "5sec" }
-//		DHT1H -> V10 {Type: "Value Display", Name: "Humidity", Color: "Green", Input: "V10", Min:"0", Max:"100", ReadingFrecuency: "5sec" }
 
 #include "KMPProDinoESP32.h"
 #include "KMPCommon.h"
 #include <SimpleDHT.h>
 #include "arduino_secrets.h"
-
-#define DEBUG
-//#define BLYNK_DEBUG
-#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
-
-#define TINY_GSM_MODEM_UBLOX
-
-#include <TinyGsmClient.h>
-#include <BlynkSimpleSIM800.h>
 
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -77,47 +57,22 @@ MeasureHT_t _measureHT[SENSOR_COUNT] =
 // Check sensor data, interval in milliseconds.
 const long CHECK_HT_INTERVAL_MS = 10000;
 // Store last measure time.
-unsigned long _mesureTimeout;
-
-// Opto input structure.
-struct OptoIn_t
-{
-	OptoIn Input;
-	WidgetLED Widget;
-	bool Status;
-};
-
-// Storing opto input data, settings and processing objects.
-OptoIn_t _optoInputs[OPTOIN_COUNT] =
-{
-	{ OptoIn1, WidgetLED(V5), false },
-	{ OptoIn2, WidgetLED(V6), false },
-	{ OptoIn3, WidgetLED(V7), false },
-	{ OptoIn4, WidgetLED(V8), false }
-};
-
-// It supports work with GSM Modem.
-TinyGsm modem(SerialModem);
-
-const uint8_t HTTP_PORT = 80;
+unsigned long _mesureTimeout = 0;
 
 // Define text colors.
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
 const char GRAY[] = "#808080";
 
+const uint8_t LOCAL_PORT = 80;
 // TCP server at port 80 will respond to HTTP requests
-WiFiServer _wifiServer(HTTP_PORT);
+WiFiServer _wifiServer(LOCAL_PORT);
 
 // Enter a MAC address and IP address for your controller below.
-byte _mac[] = { 0x00, 0x08, 0xDC, 0xF9, 0x90, 0x4E };
+byte _mac[] = { 0x00, 0x08, 0xDC, 0xB0, 0xDA, 0x91 };
 // The IP address will be dependent on your local network.
 IPAddress _ip(192, 168, 1, 197);
-EthernetServer _ethServer(HTTP_PORT);
-
-const long LED_STATUS_INTERVAL_MS = 1000;
-unsigned long _ledStatusTimeout = 0;
-bool _ledState = false;
+EthernetServer _ethServer(LOCAL_PORT);
 
 /**
 * @brief Setup void. Ii is Arduino executed first. Initialize DiNo board.
@@ -128,50 +83,24 @@ bool _ledState = false;
 void setup()
 {
 	delay(5000);
-#ifdef DEBUG
 	Serial.begin(115200);
-	Serial.println("The example GSM, Ethernet, WiFi is starting...");
-#endif
+	Serial.println("The example via WiFi and Ethernet is starting...");
 
-	// Init Dino board. Set pins, start GSM.
-	KMPProDinoESP32.init(ProDino_ESP32_Ethernet_GSM);
-	KMPProDinoESP32.SetStatusLed(blue);
+	// Init Dino board.
+	KMPProDinoESP32.begin(ProDino_ESP32_Ethernet);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_GSM);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_LoRa);
+	//KMPProDinoESP32.begin(ProDino_ESP32_Ethernet_LoRa_RFM);
+	KMPProDinoESP32.setStatusLed(blue);
+	
+	// Reset Relay status.
+	KMPProDinoESP32.setAllRelaysOff();
+
 	// Start RS485 with baud 19200 and 8N1.
-	KMPProDinoESP32.RS485Begin(19200);
+	KMPProDinoESP32.rs485Begin(19200);
 
-#ifdef DEBUG
-	Serial.println("Initializing modem...");
-#endif
-	modem.init();
-
-	String modemInfo = modem.getModemInfo();
-	if (modemInfo == "")
-	{
-#ifdef DEBUG
-		Serial.println("Modem is not started!!!");
-#endif
-		while (true) {}
-	}
-#ifdef DEBUG
-	Serial.print("Modem info: ");
-	Serial.println(modemInfo);
-#endif
-
-	// Unlock your SIM card if it locked with a PIN code. 
-	// If PIN is not valid don't try more than 3 time because the SIM card locked and need unlock with a PUK code.
-	if (strlen(PINNUMBER) > 0 && !modem.simUnlock(PINNUMBER))
-	{
-#ifdef DEBUG
-		Serial.println("PIN code is not valid! STOP!!!");
-#endif
-		while (true) {}
-	}
-
-	_mesureTimeout = 0;
-
-	Blynk.begin(AUTH_TOKEN, modem, GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD);
 	// Connect to WiFi network
-	WiFi.begin(SSID, SSID_PASSWORD);
+	WiFi.begin(SSID_NAME, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection
@@ -180,13 +109,11 @@ void setup()
 		Serial.print(".");
 	}
 
-#ifdef DEBUG
-	Serial.println("");
-	Serial.print("Connected to WiFi: ");
-	Serial.print(SSID);
-	Serial.print(" with IP address: ");
-	Serial.println(WiFi.localIP());
-#endif
+	Serial.println();
+	Serial.print("WiFi IP: ");
+	Serial.print(WiFi.localIP());
+	Serial.print(":");
+	Serial.println(LOCAL_PORT);
 
 	_wifiServer.begin();
 
@@ -198,13 +125,12 @@ void setup()
 	}
 	_ethServer.begin();
 
-#ifdef DEBUG
-	Serial.print("Connected to Ethernet DHCP with IP address: ");
-	Serial.println(Ethernet.localIP());
-	Serial.println("The example GSM, Ethernet, WiFi is started.");
-#endif
+	Serial.println("Ethernet IP:");
+	Serial.print(Ethernet.localIP());
+	Serial.print(":");
+	Serial.println(LOCAL_PORT);
 
-	KMPProDinoESP32.OffStatusLed();
+	KMPProDinoESP32.offStatusLed();
 }
 
 /**
@@ -215,32 +141,31 @@ void setup()
 */
 void loop(void)
 {
-	ShowStatus();
-	ProcessDHTSensors(false);
-	ProcessOptoInputs(false);
+	KMPProDinoESP32.processStatusLed(green, 1000);
+	ProcessDHTSensors();
 
-	Blynk.run();
-	//Serial.println("Blynk.run();");
-
+	String clientType;
 	Client * client = NULL;
 	// Check if a client has connected
 	WiFiClient wifiClient = _wifiServer.available();
-	//Serial.println("_wifiServer.available()");
+
 	if (wifiClient)
 	{
-		Serial.println("if (wifiClient) {");
+		Serial.println("-- wifiClient --");
 		// Wait for data from client to become available
 		while (wifiClient.connected() && !wifiClient.available()) {
 			delay(1);
 		}
 
+		clientType = "WiFi client";
 		client = &wifiClient;
 	}
 
 	EthernetClient ethClient = _ethServer.available();
 	if (ethClient && ethClient.connected())
 	{
-		Serial.println("if (ethClient && ethClient.connected())");
+		Serial.println("-- ethClient --");
+		clientType = "Ethernet client";
 		client = &ethClient;
 	}
 
@@ -249,72 +174,28 @@ void loop(void)
 		return;
 	}
 
-#ifdef DEBUG
 	Serial.println(">> Client connected.");
-#endif
 
 	// If client connected switch On status led.
-	KMPProDinoESP32.SetStatusLed(yellow);
+	KMPProDinoESP32.setStatusLed(yellow);
 
 	// Read client request.
 	ReadClientRequest(client);
-	WriteClientResponse(client);
+	WriteClientResponse(client, &clientType);
 
 	// Close the client connection.
 	client->stop();
 
 	// If client disconnected switch Off status led.
-	KMPProDinoESP32.OffStatusLed();
+	KMPProDinoESP32.offStatusLed();
 
-#ifdef DEBUG
 	Serial.println(">> Client disconnected.");
 	Serial.println();
-#endif
-}
-
-void ShowStatus()
-{
-	if (millis() > _ledStatusTimeout)
-	{
-		_ledState = !_ledState;
-
-		if (_ledState)
-		{
-			// Here you can check statuses: is WiFi connected, is there Ethernet connection and other...
-			KMPProDinoESP32.SetStatusLed(green);
-		}
-		else
-		{
-			KMPProDinoESP32.OffStatusLed();
-		}
-
-		// Set next time to read data.
-		_ledStatusTimeout = millis() + LED_STATUS_INTERVAL_MS;
-	}
-}
-
-/**
- * @brief Set relay state.
- * @param relay The relay which status will change.
- * @param status A new status relay.
- *
- * @return void
- */
-void SetRelay(uint8_t relayNumber, bool status, bool isBlynk = true)
-{
-	KMPProDinoESP32.SetRelayState(relayNumber, status);
-
-	if (!isBlynk)
-	{
-		Blynk.virtualWrite(relayNumber + 1, status);
-	}
 }
 
 bool ReadClientRequest(Stream *client)
 {
-#ifdef DEBUG
 	Serial.println(">> Starts client request.");
-#endif
 
 	// Loop while read all request.
 	// Read first and last row from request.
@@ -325,12 +206,10 @@ bool ReadClientRequest(Stream *client)
 		while (ReadHttpRequestLine(client, &lastRow));
 	}
 
-#ifdef DEBUG
 	Serial.println("--firstRow--");
 	Serial.println(firstRow);
 	Serial.println("--lastRow--");
 	Serial.println(lastRow);
-#endif
 
 	// If the request is GET we write only response.
 	if (GetRequestType(firstRow.c_str()) == GET)
@@ -341,9 +220,7 @@ bool ReadClientRequest(Stream *client)
 	// Invalid request type.
 	if (GetRequestType(firstRow.c_str()) != POST || lastRow.length() == 0)
 	{
-#ifdef DEBUG
 		Serial.println(">> Invalid request type.");
-#endif
 		return false;
 	}
 
@@ -351,10 +228,10 @@ bool ReadClientRequest(Stream *client)
 	if (lastRow[0] == 'r')
 	{
 		// From POST parameters we get relay number and new status.
-		uint8_t relay = CharToInt(lastRow[1]) - 1;
+		uint8_t relayNumber = CharToInt(lastRow[1]) - 1;
 		bool newState = lastRow.endsWith(W_ON);
 
-		SetRelay(relay, newState, false);
+		KMPProDinoESP32.setRelayState(relayNumber, newState);
 	}
 
 	// RS485
@@ -362,24 +239,19 @@ bool ReadClientRequest(Stream *client)
 	{
 		// From POST parameters we get data should be send.
 		String dataToSend = GetValue(lastRow, "data");
-
-#ifdef DEBUG
 		Serial.print("RS485 data to send: ");
 		Serial.println(dataToSend);
-#endif
 
 		// Transmit data.
-		KMPProDinoESP32.RS485Write(dataToSend);
+		KMPProDinoESP32.rs485Write(dataToSend);
 	}
 
-#ifdef DEBUG
 	Serial.println(">> End client request.");
-#endif
 
 	return true;
 }
 
-void WriteClientResponse(Client *client)
+void WriteClientResponse(Client *client, String *clientType)
 {
 	if (!client->connected())
 	{
@@ -387,7 +259,7 @@ void WriteClientResponse(Client *client)
 	}
 
 	// Add web page HTML.
-	BuildPage(client);
+	BuildPage(client, clientType);
 }
 
 /**
@@ -405,13 +277,11 @@ String FormatMeasure(bool isEnable, float val)
  *
  * @return void
  */
-void ProcessDHTSensors(bool force)
+void ProcessDHTSensors()
 {
 	// Checking if time to measure is occurred
 	if (millis() > _mesureTimeout)
 	{
-		int firstFreeVirtualPin = V9;
-
 		for (uint8_t i = 0; i < SENSOR_COUNT; i++)
 		{
 			// Get sensor structure.
@@ -423,14 +293,10 @@ void ProcessDHTSensors(bool force)
 				float temperature = NAN;
 				measureHT->dht.read2(&temperature, &humidity, NULL);
 
-				if (measureHT->Humidity != humidity || measureHT->Temperature != temperature || force)
+				if (measureHT->Humidity != humidity || measureHT->Temperature != temperature)
 				{
 					measureHT->Humidity = humidity;
 					measureHT->Temperature = temperature;
-
-					// Write pair of data in pins V9, V10. If have second write V11, V12.
-					Blynk.virtualWrite(firstFreeVirtualPin++, measureHT->Temperature);
-					Blynk.virtualWrite(firstFreeVirtualPin++, measureHT->Humidity);
 				}
 			}
 		}
@@ -438,87 +304,6 @@ void ProcessDHTSensors(bool force)
 		// Set next time to read data.
 		_mesureTimeout = millis() + CHECK_HT_INTERVAL_MS;
 	}
-}
-
-/**
-* @brief Processing data from isolated inputs. It will send data to Blynk if only the input statuses were changed.
-*
-* @return void
-*/
-void ProcessOptoInputs(bool force)
-{
-	for (int i = 0; i < OPTOIN_COUNT; i++)
-	{
-		OptoIn_t* optoInput = &_optoInputs[i];
-		bool currentStatus = KMPProDinoESP32.GetOptoInState(optoInput->Input);
-		if (optoInput->Status != currentStatus || ((bool)optoInput->Widget.getValue()) != currentStatus || force)
-		{
-			//Serial.println("Opto input " + String(i + 1) + " status changed to -> \"" + currentStatus + "\". WidgetLED value: " + optoInput->Widget.getValue());
-
-			currentStatus ? optoInput->Widget.on() : optoInput->Widget.off();
-			optoInput->Status = currentStatus;
-		}
-	}
-}
-
-/*****************************
-* Blynk methods.
-*****************************/
-/**
- * @brief This function will be run every time when Blynk connection is established.
- *
- */
-BLYNK_CONNECTED() {
-	// Request Blynk server to re-send latest values for all pins.
-	Blynk.syncAll();
-
-	ProcessDHTSensors(true);
-	ProcessOptoInputs(true);
-}
-
-/**
- * @brief Set Relay 1 state.
- *			On virtual pin 1.
- */
-BLYNK_WRITE(V1)
-{
-	SetRelay(Relay1, param.asInt());
-}
-
-/**
-* @brief Set Relay 1 state.
-*			On virtual pin 1.
-*/
-BLYNK_READ(V1)
-{
-	Blynk.virtualWrite(V1, KMPProDinoESP32.GetRelayState(Relay1));
-}
-
-/**
- * @brief Set Relay 2 state.
- *			On virtual pin 2.
- */
-BLYNK_WRITE(V2)
-{
-	SetRelay(Relay2, param.asInt());
-}
-
-/**
- * @brief Set Relay 3 state.
- *			On virtual pin 3.
- */
-BLYNK_WRITE(V3)
-{
-	SetRelay(Relay3, param.asInt());
-}
-
-/**
- * @brief Set Relay 4 state.
- *			On virtual pin 4.
- */
-BLYNK_WRITE(V4)
-{
-	SetRelay(Relay4, param.asInt());
 }
 
 String RelayTable()
@@ -534,7 +319,7 @@ String RelayTable()
 		char* cellColor;
 		char* cellStatus;
 		char* nextRelayStatus;
-		if (KMPProDinoESP32.GetRelayState(i))
+		if (KMPProDinoESP32.getRelayState(i))
 		{
 			cellColor = (char*)RED;
 			cellStatus = (char*)W_ON;
@@ -574,7 +359,7 @@ String InputTable()
 
 		char* cellColor;
 		char* cellStatus;
-		if (KMPProDinoESP32.GetOptoInState(i))
+		if (KMPProDinoESP32.getOptoInState(i))
 		{
 			cellColor = (char*)RED;
 			cellStatus = (char*)W_ON;
@@ -600,13 +385,11 @@ String RS485Table()
 	String receivedData = "";
 	int i;
 	// Reading data from the RS485 port.
-	while ((i = KMPProDinoESP32.RS485Read()) != -1)
+	while ((i = KMPProDinoESP32.rs485Read()) != -1)
 	{
 		// Adding received data in a buffer.
 		receivedData += (char)i;
-#ifdef DEBUG
 		Serial.write((char)i);
-#endif
 	}
 
 	return
@@ -655,17 +438,18 @@ String DHTTable()
 *
 * @return void
 */
-void BuildPage(Stream *client)
+void BuildPage(Stream *client, String *clientType)
 {
 	// Response write.
 	// Send a standard http header.
 	client->write(HEADER_200_TEXT_HTML);
 
 	client->write(
-		("<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_ESP32) + " - Web All</title></head>\
+		("<html><head><title>" + String(KMP_ELECTRONICS_LTD) + " " + String(PRODINO_ESP32) + " - Web All </title></head>\
 		<body><div style='text-align: center'>\
-		<br><hr />").c_str());
+		<hr /><h1 style = 'color: #0066FF;'>" + *clientType + "</h1><hr />").c_str());
 
+	// *clientType
 	// RS485
 	client->write(RS485Table().c_str());
 	// Relays

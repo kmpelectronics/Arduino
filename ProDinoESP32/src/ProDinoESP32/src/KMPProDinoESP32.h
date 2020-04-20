@@ -2,14 +2,14 @@
 // Company: KMP Electronics Ltd, Bulgaria
 // Web: https://kmpelectronics.eu/
 // Supported boards: 
-//		KMP ProDino ESP32 V1 https://kmpelectronics.eu/products/prodino-esp32-v1/
-//		KMP ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
-//		KMP ProDino ESP32 GSM V1 https://kmpelectronics.eu/products/prodino-esp32-gsm-v1/
-//		KMP ProDino ESP32 LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-lora-v1/
-//		KMP ProDino ESP32 LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-lora-rfm-v1/
-//		KMP ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
-//		KMP ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
-//		KMP ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
+//		ProDino ESP32 V1 https://kmpelectronics.eu/products/prodino-esp32-v1/
+//		ProDino ESP32 Ethernet V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-v1/
+//		ProDino ESP32 GSM V1 https://kmpelectronics.eu/products/prodino-esp32-gsm-v1/
+//		ProDino ESP32 LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-lora-v1/
+//		ProDino ESP32 LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-lora-rfm-v1/
+//		ProDino ESP32 Ethernet GSM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-gsm-v1/
+//		ProDino ESP32 Ethernet LoRa V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-v1/
+//		ProDino ESP32 Ethernet LoRa RFM V1 https://kmpelectronics.eu/products/prodino-esp32-ethernet-lora-rfm-v1/
 // Description:
 //		Header for KMP ProDino ESP32 boards.
 // Version: 0.6.5
@@ -106,50 +106,52 @@ extern RgbColor blue;
 extern RgbColor white;
 extern RgbColor black;
 
+extern HardwareSerial RS485Serial;
+
 extern HardwareSerial SerialModem;
 
 class KMPProDinoESP32Class
 {
  public:
 	/**
-	* @brief Initialize KMP ProDino MKR Zero board. The Ethernet doesn't start.
-	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
+	* @brief Initialize ProDino ESP32 board.
 	* @param board Initialize specific bard. Mandatory.
 	*
 	* @return void
 	*/
-	void init(BoardType board);
+	void begin(BoardType board);
+	
 	/**
-	* @brief Initialize KMP ProDino MKR Zero board.
-	*		  Micro controller Arduino Zero compatible, GSM module, relays and opto inputs.
+	* @brief Initialize ProDino ESP32 board.
 	* @param board Initialize specific bard. Mandatory.
 	* @param startEthernet If board has a Ethernet we can stop it if it isn't necessary. If true - starts Ethernet W5500 or false - the Ethernet stays stopped.
 	* @param startModem If board has GSM or LoRa module we can stop it if it isn't necessary. If true - starts module or false - the module stays stopped.
 	*
 	* @return void
 	*/
-	void init(BoardType board, bool startEthernet, bool startModem);
+	void begin(BoardType board, bool startEthernet, bool startModem);
 
 	/**
 	* @brief Restarts (Stop & Start) GSM module.
 	*
 	* @return void
 	*/
-	void RestartGSM();
+	void restartGSM();
 
 	/**
 	* @brief Restarts (Stop & Start) Ethernet.
 	*
 	* @return void
 	*/
-	void RestartEthernet();
+	void restartEthernet();
 
 	/**
 	* @brief Get status LED current color.
 	*
 	* @return RgbColor RGB color.
 	*/
-	RgbColor GetStatusLed();
+	RgbColor getStatusLed();
+
 	/**
 	* @brief Set status LED new color.
 	*
@@ -157,25 +159,24 @@ class KMPProDinoESP32Class
 	*
 	* @return void
 	*/
-	void SetStatusLed(RgbColor color);
-	///**
-	//* @brief Set status LED to On.
-	//*
-	//* @return void
-	//*/
-	//void OnStatusLed();
+	void setStatusLed(RgbColor color);
+	
 	/**
 	* @brief Set status LED to Off.
 	*
 	* @return void
 	*/
-	void OffStatusLed();
-	///**
-	//* @brief Invert status LED state. If it is On set to Off or inverse.
-	//*
-	//* @return void
-	//*/
-	//void NotStatusLed();
+	void offStatusLed();
+
+	/**
+	* @brief Process status led.
+	*
+	* @param color A new RGB color.
+	* @param blinkInterval blink interval in milliseconds.
+	*
+	* @return void
+	*/
+	void processStatusLed(RgbColor color, int blinkInterval);
 
 	/**
 	* @brief Set a relay new state.
@@ -185,7 +186,7 @@ class KMPProDinoESP32Class
 	*
 	* @return void
 	*/
-	void SetRelayState(uint8_t relayNumber, bool state);
+	void setRelayState(uint8_t relayNumber, bool state);
 	/**
 	* @brief Set relay new state.
 	*
@@ -194,7 +195,7 @@ class KMPProDinoESP32Class
 	*
 	* @return void
 	*/
-	void SetRelayState(Relay relay, bool state);
+	void setRelayState(Relay relay, bool state);
 	/**
 	* @brief Set all relays new state.
 	*
@@ -202,19 +203,19 @@ class KMPProDinoESP32Class
 	*
 	* @return void
 	*/
-	void SetAllRelaysState(bool state);
+	void setAllRelaysState(bool state);
 	/**
 	* @brief Set all relays in ON state.
 	*
 	* @return void
 	*/
-	void SetAllRelaysOn();
+	void setAllRelaysOn();
 	/**
 	* @brief Set all relays in ON state.
 	*
 	* @return void
 	*/
-	void SetAllRelaysOff();
+	void setAllRelaysOff();
 	/**
 	* @brief Get relay state.
 	*
@@ -222,7 +223,7 @@ class KMPProDinoESP32Class
 	*
 	* @return bool true relay is On, false is Off. If number is out of range - return false.
 	*/
-	bool GetRelayState(uint8_t relayNumber);
+	bool getRelayState(uint8_t relayNumber);
 	/**
 	* @brief Get relay state.
 	*
@@ -230,7 +231,7 @@ class KMPProDinoESP32Class
 	*
 	* @return bool true relay is On, false is Off. If number is out of range - return false.
 	*/
-	bool GetRelayState(Relay relay);
+	bool getRelayState(Relay relay);
 
 	/**
 	* @brief Get opto in state.
@@ -239,7 +240,7 @@ class KMPProDinoESP32Class
 	*
 	* @return bool true - opto in is On, false is Off. If number is out of range - return false.
 	*/
-	bool GetOptoInState(uint8_t optoInNumber);
+	bool getOptoInState(uint8_t optoInNumber);
 	/**
 	* @brief Get opto in state.
 	*
@@ -247,7 +248,7 @@ class KMPProDinoESP32Class
 	*
 	* @return bool true - opto in is On, false is Off. If number is out of range - return false.
 	*/
-	bool GetOptoInState(OptoIn optoIn);
+	bool getOptoInState(OptoIn optoIn);
 
 	/**
 	* @brief Connect to RS485. With default configuration SERIAL_8N1.
@@ -257,7 +258,7 @@ class KMPProDinoESP32Class
 	*
 	* @return void
 	*/
-	void RS485Begin(unsigned long baud);
+	void rs485Begin(unsigned long baud);
 	/**
 	* @brief Start connect to RS485.
 	*
@@ -269,13 +270,13 @@ class KMPProDinoESP32Class
 	*
 	* @return void
 	*/
-	void RS485Begin(unsigned long baud, uint32_t config);
+	void rs485Begin(unsigned long baud, uint32_t config);
 	/**
 	* @brief Close connection to RS485.
 	*
 	* @return void
 	*/
-	void RS485End();
+	void rs485End();
 	/**
 	* @brief Transmit one byte data to RS485.
 	*
@@ -283,7 +284,7 @@ class KMPProDinoESP32Class
 	*
 	* @return size_t Count of transmitted - one byte.
 	*/
-	size_t RS485Write(const uint8_t data);
+	size_t rs485Write(const uint8_t data);
 	/**
 	* @brief Transmit one char data to RS485.
 	*
@@ -291,7 +292,7 @@ class KMPProDinoESP32Class
 	*
 	* @return size_t Count of transmitted - one char.
 	*/
-	size_t RS485Write(const char data) { return RS485Write((uint8_t)data); }
+	size_t rs485Write(const char data) { return rs485Write((uint8_t)data); }
 	/**
 	* @brief Transmit the text to RS485.
 	*
@@ -300,7 +301,7 @@ class KMPProDinoESP32Class
 	*
 	* @return size_t Count of transmitted chars.
 	*/
-	size_t RS485Write(const char* data, size_t dataLen) { return RS485Write((const uint8_t*)data, dataLen); }
+	size_t rs485Write(const char* data, size_t dataLen) { return rs485Write((const uint8_t*)data, dataLen); }
 	/**
 	* @brief Transmit the text to RS485.
 	*
@@ -308,7 +309,7 @@ class KMPProDinoESP32Class
 	*
 	* @return size_t Count of transmitted chars.
 	*/
-	size_t RS485Write(const String data) { return RS485Write(data.c_str(), data.length()); }
+	size_t rs485Write(const String data) { return rs485Write(data.c_str(), data.length()); }
 	/**
 	* @brief Send array of bytes to RS485.
 	*
@@ -317,7 +318,7 @@ class KMPProDinoESP32Class
 	*
 	* @return size_t Count of transmitted bytes.
 	*/
-	size_t RS485Write(const uint8_t* data, size_t dataLen);
+	size_t rs485Write(const uint8_t* data, size_t dataLen);
 	/**
 	* @brief Read received data from RS485.
 	*
@@ -326,7 +327,7 @@ class KMPProDinoESP32Class
 	*   If result = -1 - buffer is empty, no data
 	*   if result > -1 - valid byte to read.
 	*/
-	int RS485Read();
+	int rs485Read();
 	/**
 	* @brief Read received data from RS485. Reading data with delay and repeating the operation while all data to arrive.
 	*
@@ -337,17 +338,17 @@ class KMPProDinoESP32Class
 	*   If result = -1 - buffer is empty, no data<para></para>
 	*   if result > -1 - valid byte to read.
 	*/
-	int RS485Read(unsigned long delayWait, uint8_t repeatTime);
+	int rs485Read(unsigned long delayWait, uint8_t repeatTime);
 
 	private:
-		void InitEthernet(bool startEthernet);
-		void InitGSM(bool startGSM);
-		void ResetGSMOn();
-		void ResetGSMOff();
-		void InitLoRa(bool startLora);
-		void RestartLoRa();
-		void ResetLoRaOn();
-		void ResetLoRaOff();
+		void beginEthernet(bool startEthernet);
+		void beginGSM(bool startGSM);
+		void resetGSMOn();
+		void resetGSMOff();
+		void beginLoRa(bool startLora);
+		void restartLoRa();
+		void resetLoRaOn();
+		void resetLoRaOff();
 };
 
 extern KMPProDinoESP32Class KMPProDinoESP32;
