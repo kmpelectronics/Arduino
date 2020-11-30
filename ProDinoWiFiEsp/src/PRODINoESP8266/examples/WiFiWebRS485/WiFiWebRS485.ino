@@ -102,7 +102,7 @@ void HandleRootPage()
 #endif
 
 	// Read POST request. data=Test&btn=Transmit
-	if (_server.method() == HTTP_POST && _server.args() == 2)
+	if (_server.method() == HTTP_POST && _server.args() > 1)
 	{
 		_isValidPost = true;
 

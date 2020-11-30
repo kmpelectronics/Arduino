@@ -82,7 +82,7 @@ void HandleRootPage()
 
 	// Read POST request.
 	// Have only one argument. r1=On ...
-	if (_server.method() == HTTP_POST && _server.args() == 1)
+	if (_server.method() == HTTP_POST && _server.args() > 1)
 	{
 		// Check argument name
 		String argName = _server.argName(0);
