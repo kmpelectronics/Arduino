@@ -1,0 +1,65 @@
+#include "KMPRS485Serial.h"
+#include <Arduino.h>
+#include <HardwareSerial.h>
+
+#define RS485Transmit HIGH
+#define RS485Receive  LOW
+
+KMPRS485SerialClass KMPRS485Serial;
+
+uint32_t _txFlushDelayuS;
+uint8_t _rs485Pin;
+
+void KMPRS485SerialClass::begin(uint8_t rs485Pin, unsigned long baud, 
+	int8_t rxPin, int8_t txPin, uint32_t config, bool invert, unsigned long timeout_ms)
+{
+	_rs485Pin = rs485Pin;
+	begin(baud, config, rxPin, txPin, invert, timeout_ms);
+	_txFlushDelayuS = (uint32_t)((1000000 / baud) * 15);
+}
+
+/**
+* @brief Begin write data to RS485.
+*
+* @return void
+*/
+void KMPRS485SerialClass::rs485BeginWrite()
+{
+	digitalWrite(_rs485Pin, RS485Transmit);
+	// Allowing transmit pin should wait for 50 nS
+	delayMicroseconds(70);
+}
+
+/**
+* @brief End write data to RS485.
+*
+* @return void
+*/
+void KMPRS485SerialClass::rs485EndWrite()
+{
+	flush();
+	delayMicroseconds(_txFlushDelayuS);
+	digitalWrite(_rs485Pin, RS485Receive);
+}
+
+size_t KMPRS485SerialClass::write(uint8_t n)
+{
+	rs485BeginWrite();
+
+	size_t result = HardwareSerial::write(n);
+
+	rs485EndWrite();
+
+	return result;
+}
+
+size_t KMPRS485SerialClass::write(const uint8_t *buffer, size_t size)
+{
+	rs485BeginWrite();
+
+	size_t result = HardwareSerial::write(buffer, size);
+
+	rs485EndWrite();
+
+	return result;
+}
