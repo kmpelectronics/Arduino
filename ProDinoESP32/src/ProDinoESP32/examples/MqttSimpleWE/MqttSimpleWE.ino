@@ -137,7 +137,10 @@ void setup()
 #endif
 
 #ifdef ETH_TEST
-	// Start the Ethernet and takes an IP address form DHCP.
+	// Start the Ethernet connection and the server.
+	// Using static IP address
+	//Ethernet.begin(_mac, _ip);
+	// Getting IP from DHCP
 	if (Ethernet.begin(_mac) == 0) {
 		Serial.println("Failed to configure Ethernet using DHCP");
 		// no point in carrying on, so do nothing forevermore:

@@ -20,7 +20,7 @@
 //		Connect DHT22 sensor(s) to GROVE connector. Only one we use in this example. Use pins: 
 //			- sensor GROVE_D0, Vcc+, Gnd(-);
 //		You have to fill fields in arduino_secrets.h file.
-//  ProDino MKR series -> Blynk pins map:
+//  ProDino ESP32 series -> Blynk pins map:
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
 //		Relay3 -> V3 {Type: "Button", Name: "Relay 3", Color: "LightBlue", Output: "V3", Mode: "Switch" }
@@ -172,6 +172,9 @@ void setup()
 	_wifiServer.begin();
 
 	// Start the Ethernet connection and the server.
+	// Using static IP address
+	//Ethernet.begin(_mac, _ip);
+	// Getting IP from DHCP
 	if (Ethernet.begin(_mac) == 0) {
 		Serial.println("Failed to configure Ethernet using DHCP");
 		// no point in carrying on, so do nothing forevermore:

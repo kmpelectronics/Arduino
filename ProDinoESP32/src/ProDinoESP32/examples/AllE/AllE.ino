@@ -98,7 +98,9 @@ void setup()
 	KMPProDinoESP32.rs485Begin(19200);
 
 	// Start the Ethernet connection and the server.
+	// Using static IP address
 	//Ethernet.begin(_mac, _ip);
+	// Getting IP from DHCP
 	if (Ethernet.begin(_mac) == 0) {
 		Serial.println("Failed to configure Ethernet using DHCP");
 		// no point in carrying on, so do nothing forevermore:
