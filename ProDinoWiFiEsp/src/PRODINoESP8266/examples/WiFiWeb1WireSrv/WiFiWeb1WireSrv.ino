@@ -1,17 +1,17 @@
 // WiFiWeb1WireSrv.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//    KMP PRODINo WIFI-ESP WROOM-02 https://kmpelectronics.eu/products/prodino-wifi-esp-wroom-02-v1/
 // Description:
-//		Web server 1 Wire measure temperature with DS18B20 example.
-// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiweb1wiresrv.aspx
-// Version: 1.0.0
-// Date: 05.05.2016
-// Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-
+//		Web server 1 Wire example measure the temperature through DS18B20 sensor.
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-wifi-examples/
+// Version: 1.1.0
+// Date: 02.02.2021
+// Author: Plamen Kovandjiev <contact@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
+//  You have to fill your credentials in arduino_secrets.h file
 //		Before start this example you need to install following libraries:
 //			- One wire: https://github.com/PaulStoffregen/OneWire
 //			- DallasTemperature library: https://github.com/milesburton/Arduino-Temperature-Control-Library
@@ -23,14 +23,9 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-
-// One Wire headers
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
-const char SSID[] = "your_wifi_ssid";
-const char SSID_PASSWORD[] = "your_wifi_ssid_password";
-const uint8_t HTTP_PORT = 80;
+#include "arduino_secrets.h"
 
 const char WHITE[] = "white";
 const char BLUE[] = "blue";
@@ -44,13 +39,8 @@ const char DEGREE_SYMBOL[] = "&deg;";
 // Thermometer Resolution in bits. http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf page 8. 
 // Bits - CONVERSION TIME. 9 - 93.75ms, 10 - 187.5ms, 11 - 375ms, 12 - 750ms. 
 #define TEMPERATURE_PRECISION 9
-
-#define SENSORS_PIN EXT_GROVE_D0
-
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-OneWire _oneWire(SENSORS_PIN);
-
-// Pass our oneWire reference to Dallas Temperature. 
+OneWire _oneWire(EXT_GROVE_D0);
 DallasTemperature _sensors(&_oneWire);
 
 // Temp device address.
@@ -59,14 +49,14 @@ DeviceAddress _tempDeviceAddress;
 // Check sensor data, interval in milliseconds.
 const long CHECK_DEVICE_INTERVAL_MS = 30000;
 // Store last measure time.
-unsigned long _checkDeviceTimeout;				
+unsigned long _checkDeviceTimeout = 0;				
 
 uint8_t _getDeviceCount;
 
 // Buffer to Hex bytes.
 char _buffer[8*2 + 1];
 
-ESP8266WebServer _server(HTTP_PORT);
+ESP8266WebServer _server(80);
 
 // If in debug mode - print debug information in Serial. Comment in production code, this bring performance.
 // This method is good for development and verification of results. But increases the amount of code and decreases productivity.
@@ -87,7 +77,7 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, SSID_PASSWORD);
+	WiFi.begin(SSID_NAME, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection
@@ -98,16 +88,12 @@ void setup(void)
 	Serial.println("");
 	Serial.println("KMP 1 Wire Server");
 	Serial.print("Connected to ");
-	Serial.println(SSID);
+	Serial.println(SSID_NAME);
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
 
 	_server.on("/", HandleRootPage);
 	_server.begin();
-
-	Serial.println("HTTP server started");
-
-	_checkDeviceTimeout = 0;
 
 	// Select available connected to board One Wire devices.
 	GetOneWireDevices();
@@ -131,11 +117,7 @@ void loop(void)
  */
 void HandleRootPage()
 {
-	//KMPDinoWiFiESP.LedOn();
-
 	_server.send(200, TEXT_HTML, BuildPage());
-
-	//KMPDinoWiFiESP.LedOff();
 }
 
 /**

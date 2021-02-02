@@ -1,14 +1,14 @@
 // WiFiWebRelaySrvAP.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//    KMP PRODINo WIFI-ESP WROOM-02 https://kmpelectronics.eu/products/prodino-wifi-esp-wroom-02-v1/
 // Description:
 //		Web server relay manipulation example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebrelayserver.aspx
-// Version: 1.0.0
-// Date: 30.04.2016
-// Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-wifi-examples/
+// Version: 1.1.0
+// Date: 02.02.2021
+// Author: Plamen Kovandjiev <contact@kmpelectronics.eu>
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
@@ -16,14 +16,13 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 
+const char* APID = "KMP ProDino WiFi-ESP AP";
 const char WI_FI_APPSK[] = "kmp12345";
-const uint8_t HTTP_PORT = 80;
 
-ESP8266WebServer _server(HTTP_PORT);
+ESP8266WebServer _server(80);
 
 const char GREEN[] = "#90EE90"; // LightGreen
 const char RED[] = "#FF4500"; // OrangeRed 
-const char* APID = "KMP ProDino WiFi-ESP AP";
 
 /**
  * @brief Execute first after start device. Initialize hardware.
@@ -45,7 +44,7 @@ void setup(void)
 
 	// If you have many devices this is generate unique SSID.
 	// Get a unique name, append the last two bytes of the MAC (HEX'd) to device name.
-	String apName = APID + String(" ") + WiFi.softAPmacAddress().substring(12);// 5E:CF:7F:81:70:3E
+	String apName = APID;// +String(" ") + WiFi.softAPmacAddress().substring(12);// 5E:CF:7F:81:70:3E
 
 	Serial.print("AP name: ");
 	Serial.println(apName);
@@ -78,8 +77,6 @@ void loop(void)
  */
 void HandleRootPage()
 {
-	//KMPDinoWiFiESP.LedOn();
-
 	// Read POST request.
 	// Have only one argument. r1=On ...
 	if (_server.method() == HTTP_POST && _server.args() > 1)
@@ -110,8 +107,6 @@ void HandleRootPage()
 	}
 
 	_server.send(200, TEXT_HTML, BuildPage());
-
-	//KMPDinoWiFiESP.LedOff();
 }
 
 /**

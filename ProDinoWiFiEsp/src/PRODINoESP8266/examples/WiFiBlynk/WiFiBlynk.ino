@@ -1,83 +1,55 @@
 // WiFiBlynk.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//    KMP PRODINo WIFI-ESP WROOM-02 https://kmpelectronics.eu/products/prodino-wifi-esp-wroom-02-v1/
 // Description:
 //		Blynk example. For this example need add in Blynk mobile application 4 button (200), 1 LCD Display(400). All 1200 points.
-// Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiblynk.aspx
-// Version: 1.0.0
-// Date: 10.05.2016
-// Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-wifi-examples/
+// Version: 1.1.0
+// Date: 27.01.2021
+// Author: Plamen Kovandjiev <contact@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
+//  You have to fill your credentials in arduino_secrets.h file
 //	Before start this example you need to install:
-//		Install Blynk library: Sketch\Include library\Menage Libraries... find Blynk and click Install.
-//		DHT library: https://github.com/adafruit/DHT-sensor-library
+//		Install librarys: Sketch\Include library\Menage Libraries...
+//         - Blynk
+//         - SimpleDHT by Winlin
 //		Connect DHT22 sensor to GROVE connector. Use pins: 
-//			- first sensor EXT_GROVE_D0, Vcc+, Gnd(-);
-//			- second sensor EXT_GROVE_D1, Vcc+, Gnd(-);
+//			- sensor EXT_GROVE_D0, Vcc+, Gnd(-);
+// --------------------------------------------------------------------------------
 //  Pin maps PRODINo WiFi-ESP -> Blynk:
-//		OptoIn and DHT data -> V0 {Type: "LCD", Mode: "Advanced", Input: "V0", Color: "Green" }
 //		Relay1 -> V1 {Type: "Button", Name: "Relay 1", Color: "Green", Output: "V1", Mode: "Switch" }
 //		Relay2 -> V2 {Type: "Button", Name: "Relay 2", Color: "Blue", Output: "V2", Mode: "Switch" }
 //		Relay3 -> V3 {Type: "Button", Name: "Relay 3", Color: "LightBlue", Output: "V3", Mode: "Switch" }
 //		Relay4 -> V4 {Type: "Button", Name: "Relay 4", Color: "Orange", Output: "V4", Mode: "Switch" }
+//		OptoIn1 -> V5 {Type: "LED", Name: "In 1", Color: "Green", Input: "V5" }
+//		OptoIn2 -> V6 {Type: "LED", Name: "In 2", Color: "Blue", Input: "V6" }
+//		OptoIn3 -> V7 {Type: "LED", Name: "In 3", Color: "LightBlue", Input: "V7" }
+//		OptoIn4 -> V8 {Type: "LED", Name: "In 4", Color: "Orange", Input: "V8" }
+//		DHT1T -> V9 {Type: "Value Display", Name: "Temperature", Color: "Green", Input: "V9", Min:"-40", Max:"80", ReadingFrecuency: "5sec" }
+//		DHT1H -> V10 {Type: "Value Display", Name: "Humidity", Color: "Green", Input: "V10", Min:"0", Max:"100", ReadingFrecuency: "5sec" }
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <DHT.h>
+#include <SimpleDHT.h>
+#include "arduino_secrets.h"
 
 #define BLYNK_DEBUG
-#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
+//#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
 
 #include <BlynkSimpleEsp8266.h>
 
-// You should get Auth Token in the Blynk App.
-char AUTH_TOKEN[] = "1234567890abcdef1234567890abcde";
-
-const char SSID[] = "your_wifi_ssid";
-const char SSID_PASSWORD[] = "your_wifi_ssid_password";
-const uint8_t HTTP_PORT = 80;
-
-// Define sensors structure.
-struct MeasureHT_t
-{
-	// Enable sensor - true, disable - false.
-	bool IsEnable;
-	// Name of sensor. Example: "First sensor".
-	String Name;
-	// DHT object with settings. Example: DHT(EXT_GROVE_D0 /* connected pin */, DHT22 /* sensor type */, 11 /* Constant for ESP8266 */)
-	DHT dht;
-	// Store, read humidity from sensor.
-	float Humidity;
-	// Store, read temperature from sensor.
-	float Temperature;
-};
-
-// Sensors count. 
-#define SENSOR_COUNT 2
-
-// Define array of 2 sensors.
-MeasureHT_t _measureHT[SENSOR_COUNT] =
-{
-	{ true, "Sensor 1", DHT(EXT_GROVE_D0, DHT22, 11), NAN, NAN },
-	{ false, "Sensor 2", DHT(EXT_GROVE_D1, DHT11, 11), NAN, NAN }
-};
+SimpleDHT22 _dht(EXT_GROVE_D0);
 
 // Check sensor data, interval in milliseconds.
-const long CHECK_HT_INTERVAL_MS = 5000;
+const long CHECK_INTERVAL_MS = 5000;
 // Store last measure time.
-unsigned long _mesureTimeout;				
-
-/**
- * Blynk LCD widget.
- */
-WidgetLCD _lcd(V0);
+unsigned long _mesureTimeout = 0;
 
 /**
  * @brief Execute first after start device. Initialize hardware.
@@ -93,28 +65,7 @@ void setup(void)
 	// Init KMP ProDino WiFi-ESP board.
 	KMPDinoWiFiESP.init();
 
-	Blynk.begin(AUTH_TOKEN, SSID, SSID_PASSWORD);
-
-	// Start sensors.
-	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-	{
-		MeasureHT_t* measureHT = &_measureHT[i];
-
-		Serial.print("Sensor name: \"" + measureHT->Name + "\" - ");
-		if (measureHT->IsEnable)
-		{
-			measureHT->dht.begin();
-			Serial.println("Start");
-		}
-		else
-		{
-			Serial.println("Disable");
-		}
-	}
-
-	_mesureTimeout = 0;
-
-	_lcd.clear();
+	Blynk.begin(AUTH_TOKEN, SSID_NAME, SSID_PASSWORD);
 }
 
 /**
@@ -124,14 +75,14 @@ void setup(void)
  */
 void loop(void)
 {
-	// Process data every CHECK_HT_INTERVAL_MS.
+	// Process data every CHECK_INTERVAL_MS.
 	if (millis() > _mesureTimeout)
 	{
 		ProcessDHTSensors();
 		ProcessOptoInputs();
 
 		// Set next time to read data.
-		_mesureTimeout = millis() + CHECK_HT_INTERVAL_MS;
+		_mesureTimeout = millis() + CHECK_INTERVAL_MS;
 	}
 
 	Blynk.run();
@@ -144,22 +95,12 @@ void loop(void)
  */
 void ProcessDHTSensors()
 {
-	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-	{
-		// Get sensor structure.
-		MeasureHT_t* measureHT = &_measureHT[i];
-		// Is enable - read data from sensor.
-		if (measureHT->IsEnable)
-		{
-			measureHT->dht.read(true);
-			measureHT->Humidity = measureHT->dht.readHumidity();
-			measureHT->Temperature = measureHT->dht.readTemperature();
+	float temperature = NAN;
+	float humidity = NAN;
+	_dht.read2(&temperature, &humidity, NULL);
 
-			String dhtData = String(measureHT->Temperature) + " C  " + String(measureHT->Humidity) + " %";
-			// Print to LCD display on row 1.
-			_lcd.print(0, 0, dhtData);
-		}
-	}
+	Blynk.virtualWrite(V9, temperature);
+	Blynk.virtualWrite(V10, humidity);
 }
 
 /**
@@ -169,26 +110,18 @@ void ProcessDHTSensors()
 */
 void ProcessOptoInputs()
 {
-	String optoInData = "";
 	// Check if any opto input changed and set new value.
 	for (int i = 0; i < OPTOIN_COUNT; i++)
 	{
-		// Add separator.
-		if (i > 0)
+		if (KMPDinoWiFiESP.GetOptoInState(i))
 		{
-			optoInData += " ";
+			WidgetLED(V5 + i).on();
 		}
-
-		// Add data.
-		optoInData +=
-			// Opto in name.
-			String(i + 1) + String(" ")
-			// Value.
-			+ (KMPDinoWiFiESP.GetOptoInState(i) ? "X" : "_");
+		else
+		{
+			WidgetLED(V5 + i).off();
+		}
 	}
-
-	// Print to LCD display on row 2.
-	_lcd.print(0, 1, optoInData);
 }
 
 /**
@@ -201,6 +134,30 @@ void SetRelay(Relay relay, int status)
 	KMPDinoWiFiESP.SetRelayState(relay, status == 1);
 }
 
+/*****************************
+* Blynk methods.
+*****************************/
+/**
+ * @brief This function will be run every time when Blynk connection is established.
+ *
+ */
+BLYNK_CONNECTED() {
+	// Request Blynk server to re-send latest values for all pins.
+	Blynk.syncAll();
+
+	ProcessDHTSensors();
+	ProcessOptoInputs();
+}
+
+/**
+* @brief Set Relay 1 state.
+*			On virtual pin 1.
+*/
+BLYNK_READ(V1)
+{
+	Blynk.virtualWrite(V1, KMPDinoWiFiESP.GetRelayState(Relay1));
+}
+
 /**
  * @brief Set Relay 1 state.
  *			On virtual pin 1.
@@ -208,6 +165,15 @@ void SetRelay(Relay relay, int status)
 BLYNK_WRITE(V1)
 {
 	SetRelay(Relay1, param.asInt());
+}
+
+/**
+* @brief Set Relay 2 state.
+*			On virtual pin 2.
+*/
+BLYNK_READ(V2)
+{
+	Blynk.virtualWrite(V2, KMPDinoWiFiESP.GetRelayState(Relay2));
 }
 
 /**
@@ -220,12 +186,30 @@ BLYNK_WRITE(V2)
 }
 
 /**
+* @brief Set Relay 3 state.
+*			On virtual pin 3.
+*/
+BLYNK_READ(V3)
+{
+	Blynk.virtualWrite(V3, KMPDinoWiFiESP.GetRelayState(Relay3));
+}
+
+/**
  * @brief Set Relay 3 state.
  *			On virtual pin 3.
  */
 BLYNK_WRITE(V3)
 {
 	SetRelay(Relay3, param.asInt());
+}
+
+/**
+* @brief Set Relay 4 state.
+*			On virtual pin 4.
+*/
+BLYNK_READ(V4)
+{
+	Blynk.virtualWrite(V4, KMPDinoWiFiESP.GetRelayState(Relay4));
 }
 
 /**

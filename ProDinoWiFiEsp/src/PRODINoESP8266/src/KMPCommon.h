@@ -48,8 +48,12 @@ const char CH_E = 'E';
 const char CH_EQUAL = '=';
 const char W_ON[] = "On";
 const char W_OFF[] = "Off";
+const char W_ON_S[] = "on";
+const char W_OFF_S[] = "off";
+const char W_OK[] = "OK";
+const char W_OK_S[] = "ok";
 const char KMP_ELECTRONICS_LTD[] = "KMP Electronics Ltd.";
-const char URL_KMPELECTRONICS_EU[] = "http://kmpelectronics.eu/";
+const char URL_KMPELECTRONICS_EU[] = "https://kmpelectronics.eu/";
 
 struct TimeSpan
 {

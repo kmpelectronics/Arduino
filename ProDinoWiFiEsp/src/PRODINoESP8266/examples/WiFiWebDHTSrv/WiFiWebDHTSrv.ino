@@ -1,21 +1,20 @@
 // WiFiWebDHTSrv.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//    KMP PRODINo WIFI-ESP WROOM-02 https://kmpelectronics.eu/products/prodino-wifi-esp-wroom-02-v1/
 // Description:
-//		Web server DHT example.
+//		Web server example with DHT sensor.
 // Example link: http://www.kmpelectronics.eu/en-us/examples/prodinowifi-esp/wifiwebdhtserver.aspx
-// Version: 1.0.0
-// Date: 05.05.2016
-// Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-
+// Version: 1.1.0
+// Date: 02.02.2021
+// Author: Plamen Kovandjiev <contact@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
+//  You have to fill your credentials in arduino_secrets.h file
 //		Before start this example you need to install DHT library: https://github.com/adafruit/DHT-sensor-library
 //		Connect DHT22 sensor to External GROVE connector. Use pins: 
 //			- first sensor EXT_GROVE_D0, Vcc+, Gnd(-);
-//			- second sensor EXT_GROVE_D1, Vcc+, Gnd(-);
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
@@ -23,44 +22,11 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <DHT.h>
+#include "arduino_secrets.h"
 
-const char SSID[] = "your_wifi_ssid";
-const char SSID_PASSWORD[] = "your_wifi_ssid_password";
-const uint8_t HTTP_PORT = 80;
+DHT _dht(EXT_GROVE_D0, DHT22, 11);
 
-// Define sensors structure.
-typedef struct
-{
-	// Enable sensor - true.
-	bool IsEnable;
-	// Name of sensor. Example: "First sensor".
-	String Name;
-	// DHT object with settings. Example: DHT(EXT_GROVE_D0 /* connected pin */, DHT22 /* sensor type */, 11 /* Constant for ESP8266 */)
-	DHT dht;
-	// Store, read humidity from sensor.
-	float Humidity;
-	// Store, read temperature from sensor.
-	float Temperature;
-} MeasureHT_t;
-
-// Sensors count. 
-#define SENSOR_COUNT 2
-
-// Define array of 2 sensors.
-MeasureHT_t _measureHT[SENSOR_COUNT] =
-{
-	{ true, "Sensor 1", DHT(EXT_GROVE_D0, DHT22, 11), NAN, NAN },
-	{ false, "Sensor 2", DHT(EXT_GROVE_D1, DHT22, 11), NAN, NAN }
-};
-
-// Gray color.
-const char GRAY[] = "#808080";
-// Check sensor data, interval in milliseconds.
-const long CHECK_HT_INTERVAL_MS = 5000;
-// Store last measure time.
-unsigned long _mesureTimeout;				
-
-ESP8266WebServer _server(HTTP_PORT);
+ESP8266WebServer _server(80);
 
 /**
  * @brief Execute first after start device. Initialize hardware.
@@ -77,7 +43,7 @@ void setup(void)
 	KMPDinoWiFiESP.init();
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, SSID_PASSWORD);
+	WiFi.begin(SSID_NAME, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
 
 	// Wait for connection
@@ -88,33 +54,14 @@ void setup(void)
 	Serial.println("");
 	Serial.println("KMP DHT Server");
 	Serial.print("Connected to ");
-	Serial.println(SSID);
+	Serial.println(SSID_NAME);
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
 
 	_server.on("/", HandleRootPage);
 	_server.begin();
 
-	Serial.println("HTTP server started");
-
-	// Start sensors.
-	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-	{
-		MeasureHT_t* measureHT = &_measureHT[i];
-
-		Serial.print("Sensor name: \"" + measureHT->Name + "\" - ");
-		if (measureHT->IsEnable)
-		{
-			measureHT->dht.begin();
-			Serial.println("Start");
-		}
-		else
-		{
-			Serial.println("Disable");
-		}
-	}
-
-	_mesureTimeout = 0;
+	_dht.begin();
 }
 
 /**
@@ -125,11 +72,10 @@ void setup(void)
 void loop(void)
 {
 	_server.handleClient();
-	GetDataFromSensors();
 }
 
 /**
- * @brief Handle root page "/". 
+ * @brief Handle root page "/".
  *
  * @return void
  */
@@ -160,59 +106,23 @@ String BuildPage()
 
 	// Add table rows, relay information.
 	String tableBody = "<tbody>";
-	for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-	{
-		// Row i, cell 1
-		MeasureHT_t* measureHT = &_measureHT[i];
-		tableBody += "<tr><td"+ (measureHT->IsEnable ? "" : " bgcolor='" + String(GRAY) + "'") + ">" + measureHT->Name + "</td>";
+	// Row i, cell 1
+	_dht.read(true);
+	_dht.readHumidity();
+	_dht.readTemperature();
 
-		// Cell i,2
-		tableBody += "<td>" + FormatMeasure(measureHT->IsEnable, measureHT->Temperature) + "</td>";
+	tableBody += "<tr><td></td>";
 
-		// Cell i,3
-		tableBody += "<td>" + FormatMeasure(measureHT->IsEnable, measureHT->Humidity) + "</td></tr>";
-	}
+	// Cell i,2
+	tableBody += "<td>" + String(_dht.readTemperature()) + "</td>";
+
+	// Cell i,3
+	tableBody += "<td>" + String(_dht.readTemperature()) + "</td></tr>";
+
 	tableBody += "</tbody>";
 
 	return page + tableBody
 		+ "</table><br><br><hr /><h1><a href='" + String(URL_KMPELECTRONICS_EU) + "' target='_blank'>Visit " + String(KMP_ELECTRONICS_LTD) + "</a></h1>"
 		+ "<h3><a href='" + String(URL_KMPELECTRONICS_EU_DINO_WIFI) + "' target='_blank'>Information about " + String(PRODINO_WIFI) + " board</a></h3>"
 		+ "<hr /></div></body></html>";
-}
-
-/**
- * @brief Prepare sensor result.
- *
- * @return void
- */
-String FormatMeasure(bool isEnable, float val)
-{
-	return isEnable ? String(val) : "-";
-}
-
-/**
- * @brief Read data from sensors a specified time.
- *
- * @return void
- */
-void GetDataFromSensors()
-{
-	if (millis() > _mesureTimeout)
-	{
-		for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-		{
-			// Get sensor structure.
-			MeasureHT_t* measureHT = &_measureHT[i];
-			// Is enable - read data from sensor.
-			if (measureHT->IsEnable)
-			{
-				measureHT->dht.read(true);
-				measureHT->Humidity = measureHT->dht.readHumidity();
-				measureHT->Temperature = measureHT->dht.readTemperature();
-			}
-		}
-
-		// Set next time to read data.
-		_mesureTimeout = millis() + CHECK_HT_INTERVAL_MS;
-	}
 }

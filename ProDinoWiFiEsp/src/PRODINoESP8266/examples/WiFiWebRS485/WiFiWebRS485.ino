@@ -1,35 +1,31 @@
 // WiFiWebRS485.ino
 // Company: KMP Electronics Ltd, Bulgaria
-// Web: http://kmpelectronics.eu/
+// Web: https://kmpelectronics.eu/
 // Supported boards:
-//		KMP ProDino WiFi-ESP WROOM-02 (http://www.kmpelectronics.eu/en-us/products/prodinowifi-esp.aspx)
+//    KMP PRODINo WIFI-ESP WROOM-02 https://kmpelectronics.eu/products/prodino-wifi-esp-wroom-02-v1/
 // Description:
 //		Web server RS485 example. 
-// Example link: http://www.kmpelectronics.eu/en-us/examples/dinowifiesp/wifiwebrelayserver.aspx
-// Version: 1.0.0
-// Date: 01.07.2016
-// Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
-
+// Example link: https://kmpelectronics.eu/tutorials-examples/prodino-wifi-examples/
+// Version: 1.1.0
+// Date: 02.02.2021
+// Author: Plamen Kovandjiev <contact@kmpelectronics.eu>
 // --------------------------------------------------------------------------------
 // Prerequisites:
-//		Before start this example you need:
+//  You have to fill your credentials in arduino_secrets.h file
 //		Connect RS485 (make echo, and configured 19200, 8N1) a device in ProDino RS485 port.
 // Attention:
-//		The Serial (debug port) and RS485 port is same.
+//		The Serial (debug port) and RS485 port are the same.
 
 #include <KMPDinoWiFiESP.h>
 #include <KMPCommon.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include "arduino_secrets.h"
 
 //#define DEBUG
 
-const char SSID[] = "your_wifi_ssid";
-const char SSID_PASSWORD[] = "your_wifi_ssid_password";
-const uint8_t HTTP_PORT = 80;
-
-ESP8266WebServer _server(HTTP_PORT);
+ESP8266WebServer _server(80);
 
 // If Post request is valid, read data from RS485.
 bool _isValidPost = false;
@@ -48,33 +44,23 @@ void setup()
 	KMPDinoWiFiESP.RS485Begin(19200);
 
 	// Connect to WiFi network
-	WiFi.begin(SSID, SSID_PASSWORD);
-#ifdef DEBUG
+	WiFi.begin(SSID_NAME, SSID_PASSWORD);
 	Serial.print("\n\r \n\rWorking to connect");
-#endif
 
 	// Wait for connection
 	while (WiFi.status() != WL_CONNECTED) {
 		delay(500);
-#ifdef DEBUG
 		Serial.print(".");
-#endif
 	}
-#ifdef DEBUG
 	Serial.println("");
 	Serial.println("KMP RS485 Server");
 	Serial.print("Connected to ");
-	Serial.println(SSID);
+	Serial.println(SSID_NAME);
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
-#endif
 
 	_server.on("/", HandleRootPage);
 	_server.begin();
-
-#ifdef DEBUG
-	Serial.println("HTTP server started");
-#endif
 }
 
 
