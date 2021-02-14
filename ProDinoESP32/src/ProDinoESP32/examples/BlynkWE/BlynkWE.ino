@@ -46,7 +46,8 @@
 #include <WiFiClient.h>
 #include <SimpleDHT.h>
 
-// if this define uncommented example supports only boards with Ethernet
+// If you stay this define uncommented (this situation), the example supports only boards with Ethernet
+// If you commet this define, the example supports only boards with WiFi 
 #define ETH_TEST
 
 #ifdef ETH_TEST

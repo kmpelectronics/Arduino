@@ -37,7 +37,7 @@ void EthernetServer::initSocket()
 #ifdef ESP32
 void EthernetServer::begin(uint16_t port)
 {
-	if (port) {
+	if (port > 0) {
 		_port = port;
 	}
 
