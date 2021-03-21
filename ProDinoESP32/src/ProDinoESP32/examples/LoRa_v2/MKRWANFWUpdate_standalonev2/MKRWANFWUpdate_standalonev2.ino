@@ -288,7 +288,6 @@ again:
 
 void loop() {
   // put your main code here, to run repeatedly:
-  // put your main code here, to run repeatedly:
   if (ret != 0) {
 	  Serial.println("Some errors occurred during flash operation. See above.");
     while (1);
