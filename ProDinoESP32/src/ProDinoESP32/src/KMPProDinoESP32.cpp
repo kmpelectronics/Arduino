@@ -23,7 +23,7 @@ struct BoardConfig_t {
 	bool Ethernet;
 	bool GSM;
 	bool LoRa;
-	bool LoRaRFM;
+	bool LoRaRFM95;
 };
 
 const BoardConfig_t BoardConfig[BOARDS_COUNT] = {
@@ -86,12 +86,31 @@ HardwareSerial RS485Serial(1);
 #define GSMDTRPin   J14_9
 #define GSMResetPin J14_10
 
-// LoRa module pins for Serial2
+// LoRa module pins
 #define LoRaRxPin    J14_5
 #define LoRaLowPin   J14_6
 #define LoRaTxPin    J14_8
 #define LoRaBootPin  J14_11
 #define LoRaResetPin J14_12
+
+// RFM module pins
+// J14_2	5V
+// J14_3	GND // RFM95_GND
+// J14_4	3V3 // RFM95_3V3
+// J14_5	X
+#define RFM95_DIO2	J14_6
+// J14_7	X
+// J14_8	25 // DIO1
+// J14_9	26 // DIO0
+#define RFM95_RESET	J14_10
+// J14_11	X
+// J14_12	X
+#define RFM95_SCK      J2_1
+#define RFM95_MISO     J2_2
+#define RFM95_MOSI     J2_3
+#define RFM95_NSS      J2_4
+// J2_5	1  // IO5
+// J2_6 GND
 HardwareSerial SerialModem(2);
 
 #define colorSaturation 32 // Max 255 but light is too sharp.
@@ -141,6 +160,11 @@ void KMPProDinoESP32Class::begin(BoardType board, bool startEthernet, bool start
 			if (boardConfig.LoRa)
 			{
 				beginLoRa(startModem);
+			}
+
+			if (boardConfig.LoRaRFM95)
+			{
+				beginLoRaRFM95(startModem);
 			}
 
 			break;
@@ -241,9 +265,9 @@ void KMPProDinoESP32Class::restartLoRa()
 {
 	// Reset occurs when a low level is applied to the RESET_N pin, which is normally set high by an internal pull-up, for a valid time period min 10 mS.
 	resetLoRaOn();
-	delay(200);
+	delay(20);
 	resetLoRaOff();
-	delay(200);
+	delay(20);
 }
 
 void KMPProDinoESP32Class::resetLoRaOn()
@@ -254,6 +278,42 @@ void KMPProDinoESP32Class::resetLoRaOn()
 void KMPProDinoESP32Class::resetLoRaOff()
 {
 	digitalWrite(LoRaResetPin, HIGH);
+}
+
+void KMPProDinoESP32Class::beginLoRaRFM95(bool startLoraRFM)
+{
+	// Turn on the Lora module by triggering LoraResetPin pin.
+	pinMode(RFM95_RESET, OUTPUT);
+	if (startLoraRFM)
+	{
+		restartLoRaRFM95();
+	}
+	else
+	{
+		resetLoRaRFM95On();
+	}
+
+	// Set CS pin.
+	pinMode(RFM95_NSS, OUTPUT);
+	digitalWrite(RFM95_NSS, HIGH);
+}
+
+void KMPProDinoESP32Class::restartLoRaRFM95()
+{
+	resetLoRaRFM95On();
+	delay(20);
+	resetLoRaRFM95Off();
+	delay(20);
+}
+
+void KMPProDinoESP32Class::resetLoRaRFM95On()
+{
+	digitalWrite(RFM95_RESET, LOW);
+}
+
+void KMPProDinoESP32Class::resetLoRaRFM95Off()
+{
+	digitalWrite(RFM95_RESET, HIGH);
 }
 
 void KMPProDinoESP32Class::restartGSM()

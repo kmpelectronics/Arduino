@@ -57,6 +57,16 @@
 #define	J14_11	13 // IO13
 #define	J14_12	15 // IO15
 
+ /**
+  * @brief J2 connector
+  */
+#define	J2_1	18 // SCK
+#define	J2_2	19 // MISO 
+#define	J2_3	23 // MOSI
+#define	J2_4	17 // IO17
+#define	J2_5	1  // IO5
+//#define	J2_6	GND
+
 
 /**
  * @brief Relays.
@@ -349,6 +359,10 @@ class KMPProDinoESP32Class
 		void restartLoRa();
 		void resetLoRaOn();
 		void resetLoRaOff();
+		void beginLoRaRFM95(bool startLoraRFM);
+		void restartLoRaRFM95();
+		void resetLoRaRFM95On();
+		void resetLoRaRFM95Off();
 };
 
 extern KMPProDinoESP32Class KMPProDinoESP32;
