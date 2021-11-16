@@ -33,7 +33,7 @@
 // up to 4 sockets.  W5200 & W5500 can have up to 8 sockets.  Several bytes
 // of RAM are used for each socket.  Reducing the maximum can save RAM, but
 // you are limited to fewer simultaneous connections.
-#ifdef WEBSOCKETS_USE_ETHERNET
+#ifdef USE_LARGE_ETHERNET_BUFFERS
 	#define MAX_SOCK_NUM 2
 #else
 	#if defined(RAMEND) && defined(RAMSTART) && ((RAMEND - RAMSTART) <= 2048)
@@ -49,7 +49,7 @@
 // can really help with UDP protocols like Artnet.  In theory larger
 // buffers should allow faster TCP over high-latency links, but this
 // does not always seem to work in practice (maybe Wiznet bugs?)
-#ifdef WEBSOCKETS_USE_ETHERNET
+#ifdef USE_LARGE_ETHERNET_BUFFERS
 	#define ETHERNET_LARGE_BUFFERS
 #endif
 
