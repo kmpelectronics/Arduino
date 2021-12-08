@@ -5,14 +5,14 @@
 //		Expander MCP23S08
 // Description:
 //		Header file for work with expander.
-// Version: 0.0.1
-// Date: 14.12.2018
+// Version: 0.0.2
+// Date: 08.12.2021
 // Author: Plamen Kovandjiev <p.kovandiev@kmpelectronics.eu>
 
 #ifndef _MCP23S08_h
 #define _MCP2S308_h
 
-#include "arduino.h"
+#include "Arduino.h"
 #include <SPI.h>
 
 class MCP23S08Class
