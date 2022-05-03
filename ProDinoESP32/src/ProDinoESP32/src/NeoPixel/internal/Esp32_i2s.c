@@ -26,7 +26,13 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 
+#include "esp_system.h" // Load ESP_IDF_VERSION_MAJOR if exists
+// ESP_IDF_VERSION_MAJOR is defined in ESP-IDF v3.3 or later
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR > 3
+#include "esp_intr_alloc.h"
+#else
 #include "esp_intr.h"
+#endif
 #include "rom/ets_sys.h"
 #include "soc/gpio_reg.h"
 #include "soc/gpio_sig_map.h"
